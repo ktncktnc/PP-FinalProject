@@ -70,3 +70,18 @@ float PnmImage::computeError(uchar3 *a1, uchar3 *a2, uint32_t n) {
     return float(err) / float(n * 3);
 }
 
+uint32_t PnmImage::getWidth() const {
+    return width;
+}
+
+uint32_t PnmImage::getHeight() const {
+    return height;
+}
+
+
+uchar3 *PnmImage::getPixels() const {
+    return pixels;
+}
+
+
+

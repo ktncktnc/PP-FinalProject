@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <cstdint>
+#include <vector_types.h>
 
 class PnmImage {
 private:
@@ -51,4 +52,13 @@ public:
     void write(const char *fileName);
 
     void compare(const PnmImage &other);
+
+    uint32_t getWidth() const;
+
+
+    uint32_t getHeight() const;
+
+
+    uchar3 *getPixels() const;
+
 };
