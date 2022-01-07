@@ -27,8 +27,8 @@ int main(int argc, char **argv) {
     BaseSolution *sequentialSolution = new SequentialSolution();
     BaseSolution *parallelSolution = new ParallelSolutionBaseline();
 
-    PnmImage outputImageSequential = sequentialSolution->run(inputImage, argv + 2);
-    PnmImage outputImageParallel = parallelSolution->run(inputImage, argv + 2);
+    PnmImage outputImageSequential = sequentialSolution->run(inputImage, argc - 2, argv + 2);
+    PnmImage outputImageParallel = parallelSolution->run(inputImage, argc - 2, argv + 2);
 
     outputImageSequential.write("output_sequential.pnm");
     outputImageParallel.write("output_parallel.pnm");

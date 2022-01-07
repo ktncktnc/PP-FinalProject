@@ -1,6 +1,9 @@
 #include "image.cuh"
 
 void PnmImage::read(const char *fileName) {
+    if (pixels)
+        free(pixels);
+    
     FILE *f = fopen(fileName, "r");
     if (f == nullptr) {
         printf("Cannot read %s\n", fileName);

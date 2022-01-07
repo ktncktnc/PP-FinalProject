@@ -1,6 +1,6 @@
 
 #include "sequential_solution.cuh"
 
-PnmImage SequentialSolution::run(const PnmImage &inputImage, char **argv) {
-    return BaseSolution::run(inputImage, argv); // TODO: Thầy-Khoa
+PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **argv) {
+    return BaseSolution::run(inputImage, argc, argv); // TODO: Thầy-Khoa
 }

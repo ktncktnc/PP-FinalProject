@@ -4,5 +4,5 @@
 
 class SequentialSolution :public BaseSolution{
 public:
-    PnmImage run(const PnmImage &inputImage, char **argv) override;
+    PnmImage run(const PnmImage &inputImage, int argc, char **argv) override;
 };
