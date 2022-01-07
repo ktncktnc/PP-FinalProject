@@ -87,4 +87,14 @@ uchar3 *PnmImage::getPixels() const {
 }
 
 
+uint32_t IntImage::getWidth() const {
+    return width;
+}
 
+uint32_t IntImage::getHeight() const {
+    return height;
+}
+
+int3 *IntImage::getPixels() const {
+    return pixels;
+}
