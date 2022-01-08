@@ -17,7 +17,7 @@ void printDeviceInfo() {
     printf("****************************\n");
 }
 
-void writePnm(uchar* pixel, int width, int height, char *fileName){
+void writePnm(uchar3* pixel, int width, int height, char *fileName){
     FILE * f = fopen(fileName, "w");
     if (f == NULL)
     {
