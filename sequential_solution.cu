@@ -4,7 +4,7 @@
 using namespace std;
 
 namespace SequentialFunction {
-    void scan(const int *input, u_int32_t inputWidth, u_int32_t inputHeight, const int3 *filter,
+    void scan(const int *input, u_int32_t inputWidth, u_int32_t inputHeight, const int *filter,
               u_int32_t filterSize, int* output) {
         int index, k_index, k_x, k_y, k_value, sum;
 
@@ -21,9 +21,7 @@ namespace SequentialFunction {
                         k_y = min(max(y + j, 0), inputWidth - 1);
 
                         k_index = k_x*inputWidth + k_y;
-
-                        k_value = (j % 3 == 0)*filter[i].x + (j % 3 == 1)*filter[i].y + (j % 3 == 2)* filter[i].z;
-                        sum += input[index] * value;
+                        sum += input[k_index] * filter[(i + filterSize/2)*filterSize + j + filterSize/2];
                     }
                 }
                 output[index] = sum;
@@ -102,9 +100,65 @@ namespace SequentialFunction {
             u_int32_t inputHeight,
             int* output
             ){
+        int a, b, c, min_idx, offset;
         if (direction == 0){
+            min_idx = findMinIndex(input + (inputHeight - 1)*inputWidth, inputWidth);
+            output[inputHeight - 1] = min_idx;
 
+            for(int row = inputHeight - 2; row >= 0; row--){
+                a = input[row*inputWidth + max(min_idx - 1, 0)];
+                b = input[row*inputWidth + min_idx];
+                c = input[row*inputWidth + min(min_idx + 1, inputWidth - 1)];
+
+                if(min(a, b) > c)
+                    offset = 1;
+                else if (min(b, c) > a){
+                    offset = -1;
+                }
+                else if (min(a, c) >= b)
+                    offset = 0;
+
+                min_idx = min(max(min_idx + offset, 0), inputWidth - 1);
+                output[row] = min_idx;
+            }
         }
+        else{
+            min_idx = 0;
+            for(int i = 0; i < inputHeight; i++){
+                if (input[i * inputWidth] < input[min_idx * inputWidth])
+                    min_idx = i;
+            }
+
+            output[inputWidth - 1] = min_idx;
+
+            for(int col = inputWidth - 2; col >= 0; col--){
+                a = input[max(min_idx - 1, 0)*inputWidth + col];
+                b = input[min_idx*inputWidth + col];
+                c = input[min(min_idx + 1, inputHeight - 1)*inputWidth + col)];
+
+                if(min(a, b) > c)
+                    offset = 1;
+                else if (min(b, c) > a){
+                    offset = -1;
+                }
+                else if (min(a, c) >= b)
+                    offset = 0;
+
+                min_idx = min(max(min_idx + offset, 0), inputHeight - 1);
+                output[col] = min_idx;
+            }
+        }
+    }
+
+    // Util funcs--------------------
+    int findMinIndex(int* arr, int size){
+        int min_idx = 0;
+        for(int i = 1; i < size; i++){
+            if (arr[min_idx] > arr[i])
+                min_idx = i;
+        }
+
+        return min_idx;
     }
 }
 
@@ -116,6 +170,7 @@ const int32_t ParallelSolutionBaseline::SOBEL_Y[3][3] = {{1,  2,  1},
                                                          {-1, -2, -1}};
 
 PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **argv) {
+    IntImage intImage = scan(inputImage);
     return BaseSolution::run(inputImage, argc, argv);
 }
 
@@ -123,9 +178,9 @@ IntImage SequentialSolution::scan(const PnmImage &inputImage) {
     int* grayImg = (int*)malloc(inputImage.getHeight() * inputImage.getWidth());
 
     int* grImgX, *grImgY, *grImg;
-    grImgX = (int*)malloc(inputImage.getHeight() * inputImage.getWidth());
-    grImgY = (int*)malloc(inputImage.getHeight() * inputImage.getWidth());
-    grImg = (int*)malloc(inputImage.getHeight() * inputImage.getWidth());;
+    grImgX = (int*)malloc(inputImage.getHeight() * inputImage.getWidth() * sizeof(int));
+    grImgY = (int*)malloc(inputImage.getHeight() * inputImage.getWidth() * sizeof(int));
+    grImg = (int*)malloc(inputImage.getHeight() * inputImage.getWidth() * sizeof(int));
 
     //RGB to gray
     SequentialFunction::toGray(inputImage, grayImg);
@@ -133,10 +188,8 @@ IntImage SequentialSolution::scan(const PnmImage &inputImage) {
     //Scan
     SequentialFunction::scan(grayImg, inputImage.getWidth(), inputImage.getHeight(), SOBEL_X, 3,grImgX);
     SequentialFunction::scan(grayImg, inputImage.getWidth(), inputImage.getHeight(), SOBEL_X, 3,grImgY);
-
     SequentialFunction::addAbs(imgX, imgY, inputImage.getWidth(), inputImage.getHeight(), grImg);
 
     IntImage outputImage = IntImage(inputImage.getWidth(), inputImage.getHeight());
-
-
+    return outputImage;
 }
