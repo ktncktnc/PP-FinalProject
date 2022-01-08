@@ -16,3 +16,19 @@ void printDeviceInfo() {
     printf("SMEM / one SM: %lu bytes\n", devProv.sharedMemPerMultiprocessor);
     printf("****************************\n");
 }
+
+void writePnm(uchar* pixel, int width, int height, char *fileName){
+    FILE * f = fopen(fileName, "w");
+    if (f == NULL)
+    {
+        printf("Cannot write %s\n", fileName);
+        exit(EXIT_FAILURE);
+    }
+
+    fprintf(f, "P3\n%i\n%i\n255\n", width, height);
+
+    for (int i = 0; i < width * height; i++)
+        fprintf(f, "%hhu\n%hhu\n%hhu\n", pixels[i].x, pixels[i].y, pixels[i].z);
+
+    fclose(f);
+}

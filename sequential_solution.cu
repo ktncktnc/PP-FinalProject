@@ -1,10 +1,11 @@
 #include "sequential_solution.cuh"
+#include "utils.cuh"
 #include <iostream>
 
 using namespace std;
 
 namespace SequentialFunction {
-        void convolution(int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int* output) {
+    void convolution(int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int* output) {
         int index, k_index, k_x, k_y, sum;
 
         //For each pixel in image
@@ -145,6 +146,10 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
         cur_width--;
 
         input = output;
+
+        if(i == 0){
+            writePnm(input, cur_width, height, char "debug_img.pnm");
+        }
     }
 
     return PnmImage(cur_width, height, input);
