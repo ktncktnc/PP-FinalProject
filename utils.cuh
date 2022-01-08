@@ -13,4 +13,4 @@
 
 void printDeviceInfo();
 
-void writePnm(uchar3* pixel, int width, int height, char* fileName);
+void writePnm(uchar3* pixels, int width, int height, char *fileName);
