@@ -4,7 +4,7 @@
 using namespace std;
 
 namespace SequentialFunction {
-        void convolution(const int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int* output) {
+        void convolution(int *input, int inputWidth, int inputHeight, int *filter, int filterSize, int* output) {
         int index, k_index, k_x, k_y, sum;
 
         //For each pixel in image
@@ -34,7 +34,7 @@ namespace SequentialFunction {
         }
     }
 
-    void addAbs(const int *input_1, const int* input_2, u_int32_t inputWidth, u_int32_t inputHeight,
+    void addAbs(int *input_1, int* input_2, u_int32_t inputWidth, u_int32_t inputHeight,
                  int *output) {
         int index, value;
 
@@ -48,7 +48,7 @@ namespace SequentialFunction {
         }
     }
 
-    void createCumulativeEnergyMap( const int * input, u_int32_t inputWidth, u_int32_t inputHeight, int* output) {
+    void createCumulativeEnergyMap(int * input, u_int32_t inputWidth, u_int32_t inputHeight, int* output) {
         int a, b, c;
 
         // Copy last line
@@ -98,7 +98,7 @@ namespace SequentialFunction {
         return min_idx;
     }
 
-    void copyARow(const int32_t* input, int width, int height, int rowIdx, int removedIdx, int* output){
+    void copyARow(int32_t* input, int width, int height, int rowIdx, int removedIdx, int* output){
         int output_idx = rowIdx * width, input_idx;
 
         for(int i = 0; i < width; i++){
@@ -106,11 +106,11 @@ namespace SequentialFunction {
 
             input_idx = rowIdx * width + i;
             output[output_idx] = input[input_idx];
-            idx++;
+            output_idx++;
         }
     }
 
-    void copyARow(const uchar3* input, int width, int height, int rowIdx, int removedIdx, uchar3* output){
+    void copyARow(uchar3* input, int width, int height, int rowIdx, int removedIdx, uchar3* output){
         int output_idx = rowIdx * width, input_idx;
 
         for(int i = 0; i < width; i++){
@@ -118,19 +118,19 @@ namespace SequentialFunction {
 
             input_idx = rowIdx * width + i;
             output[output_idx] = input[input_idx];
-            idx++;
+            output_idx++;
         }
     }
 
-    void reduce(const uchar3* input, int width, int height, int* path, uchar3* output){
+    void reduce(uchar3* input, int width, int height, int* path, uchar3* output){
         for(int i = 0; i < height; i++){
             copyARow(input, width, height, i, path[i], output);
         }
     }
 }
 
-const int32_t SequentialFunction::SOBEL_X[3][3] = {{1, 0, -1}, {2, 0, -2}, {1, 0, -1}};
-const int32_t SequentialFunction::SOBEL_Y[3][3] = {{1,  2,  1}, {0,  0,  0}, {-1, -2, -1}};
+const int32_t SequentialSolution::SOBEL_X[9] = {1, 0, -1, 2, 0, -2, 1, 0, -1};
+const int32_t SequentialSolution::SOBEL_Y[9] = {1, 2, 1, 0, 0, 0, -1, -2, -1};
 
 PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **argv) {
     uchar3* input = inputImage.getPixels();
@@ -147,10 +147,10 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
         input = output;
     }
 
-    return new PnmImage(cur_width, height, input);
+    return PnmImage(cur_width, height, input);
 }
 
-void SequentialSolution::scan(const uchar3* input, int width, int height, uchar3* output, int counter){
+void SequentialSolution::scan(uchar3* input, int width, int height, uchar3* output, int counter){
     int output_width = width - 1;
     int output_height = height;
 
@@ -161,7 +161,7 @@ void SequentialSolution::scan(const uchar3* input, int width, int height, uchar3
     SequentialFunction::convertToGray(input, width, height, grayImg);
 
     // Convolution
-    int *gradX, *gradY, grad;
+    int *gradX, *gradY, *grad;
     gradX = (int*) malloc(width * height * sizeof(int));
     gradY = (int*)malloc(width * height * sizeof(int));
     grad = (int*)malloc(width * height * sizeof(int));
@@ -180,7 +180,7 @@ void SequentialSolution::scan(const uchar3* input, int width, int height, uchar3
     int *path = (int*) malloc(height * sizeof(int));
     SequentialFunction::findSeamCurve(map, width, height, path);
 
-    SequentialFunction::reduce(input, width, height, output);
+    SequentialFunction::reduce(input, width, height, path, output);
 
     free(grayImg);
     free(gradX);
