@@ -177,7 +177,7 @@ void SequentialSolution::scan(uchar3* input, int width, int height, uchar3* outp
     // Cal energy
     SequentialFunction::addAbs(gradX, gradY, width, height, grad);
 
-    if (DEBUG_MODE && counter == 0){
+    if (DEBUG_MODE == true && counter == 0){
         drawSobelImg(grad, width, height, "grad.pnm");
     }
 
