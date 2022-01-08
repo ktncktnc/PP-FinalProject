@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     outputImageSequential.write("output_sequential.pnm");
     //outputImageParallel.write("output_parallel.pnm");
 
-    outputImageSequential.compare(outputImageParallel);
+    //outputImageSequential.compare(outputImageParallel);
 
     free(sequentialSolution);
     //free(parallelSolution);
