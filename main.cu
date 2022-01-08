@@ -25,16 +25,15 @@ int main(int argc, char **argv) {
     inputImage.read(inputFilename);
 
     BaseSolution *sequentialSolution = new SequentialSolution();
-    BaseSolution *parallelSolution = new ParallelSolutionBaseline();
+    //BaseSolution *parallelSolution = new ParallelSolutionBaseline();
 
-    PnmImage outputImageSequential = sequentialSolution->run(inputImage, argc - 2, argv + 2);
+    //PnmImage outputImageSequential = sequentialSolution->run(inputImage, argc - 2, argv + 2);
     PnmImage outputImageParallel = parallelSolution->run(inputImage, argc - 2, argv + 2);
 
     outputImageSequential.write("output_sequential.pnm");
     outputImageParallel.write("output_parallel.pnm");
 
     outputImageSequential.compare(outputImageParallel);
-
 
     free(sequentialSolution);
     free(parallelSolution);
