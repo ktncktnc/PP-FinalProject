@@ -2,8 +2,8 @@
 
 #include "solution.cuh"
 
-#define DEBUG_MODE = true;
-#define DEBUG_IDX = -1;
+#define DEBUG_MODE 1;
+#define DEBUG_IDX -1;
 
 namespace SequentialFunction{
     void convolution(int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int* output);
