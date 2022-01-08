@@ -148,7 +148,7 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
         input = output;
 
         if(i == 0){
-            writePnm(input, cur_width, height, char "debug_img.pnm");
+            writePnm(input, cur_width, height, "debug_img.pnm");
         }
     }
 
