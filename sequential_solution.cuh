@@ -23,9 +23,9 @@ namespace SequentialFunction{
 
 class SequentialSolution :public BaseSolution{
 private:
-    static const u_int32_t FILTER_SIZE = 3;
-    static const int32_t SOBEL_X[9];
-    static const int32_t SOBEL_Y[9];
+    static const int FILTER_SIZE = 3;
+    static const int SOBEL_X[9];
+    static const int SOBEL_Y[9];
 
 public:
     PnmImage run(const PnmImage &inputImage, int argc, char **argv) override;

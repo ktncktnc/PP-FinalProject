@@ -34,7 +34,7 @@ namespace SequentialFunction {
         }
     }
 
-    void addAbs(int *input_1, int* input_2, u_int32_t inputWidth, u_int32_t inputHeight,
+    void addAbs(int *input_1, int* input_2, int inputWidth, int inputHeight,
                  int *output) {
         int index, value;
 
@@ -48,7 +48,7 @@ namespace SequentialFunction {
         }
     }
 
-    void createCumulativeEnergyMap(int * input, u_int32_t inputWidth, u_int32_t inputHeight, int* output) {
+    void createCumulativeEnergyMap(int * input, int inputWidth, int inputHeight, int* output) {
         int a, b, c;
 
         // Copy last line
@@ -64,7 +64,7 @@ namespace SequentialFunction {
             }
         }
     }
-    void findSeamCurve(int* input, u_int32_t inputWidth, u_int32_t inputHeight, int* output){
+    void findSeamCurve(int* input, int inputWidth, int inputHeight, int* output){
         int a, b, c, min_idx, offset;
         min_idx = findMinIndex(input + (inputHeight - 1)*inputWidth, inputWidth);
         output[inputHeight - 1] = min_idx;
@@ -129,8 +129,8 @@ namespace SequentialFunction {
     }
 }
 
-const int32_t SequentialSolution::SOBEL_X[9] = {1, 0, -1, 2, 0, -2, 1, 0, -1};
-const int32_t SequentialSolution::SOBEL_Y[9] = {1, 2, 1, 0, 0, 0, -1, -2, -1};
+const int SequentialSolution::SOBEL_X[9] = {1, 0, -1, 2, 0, -2, 1, 0, -1};
+const int SequentialSolution::SOBEL_Y[9] = {1, 2, 1, 0, 0, 0, -1, -2, -1};
 
 PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **argv) {
     uchar3* input = inputImage.getPixels();
