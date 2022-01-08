@@ -5,7 +5,7 @@ using namespace std;
 
 namespace SequentialFunction {
         void convolution(const int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int* output) {
-        int index, k_index, k_x, k_y, k_value, sum;
+        int index, k_index, k_x, k_y, sum;
 
         //For each pixel in image
         for(int x = 0; x < inputHeight; x++){
@@ -64,7 +64,7 @@ namespace SequentialFunction {
             }
         }
     }
-    void findSeamCurve(const int* input, u_int32_t inputWidth, u_int32_t inputHeight, int* output){
+    void findSeamCurve(int* input, u_int32_t inputWidth, u_int32_t inputHeight, int* output){
         int a, b, c, min_idx, offset;
         min_idx = findMinIndex(input + (inputHeight - 1)*inputWidth, inputWidth);
         output[inputHeight - 1] = min_idx;
@@ -105,7 +105,7 @@ namespace SequentialFunction {
             if(i == removedIdx) continue;
 
             input_idx = rowIdx * width + i;
-            output[idx] = input[input_idx];
+            output[output_idx] = input[input_idx];
             idx++;
         }
     }
@@ -117,7 +117,7 @@ namespace SequentialFunction {
             if(i == removedIdx) continue;
 
             input_idx = rowIdx * width + i;
-            output[idx] = input[input_idx];
+            output[output_idx] = input[input_idx];
             idx++;
         }
     }
@@ -129,21 +129,18 @@ namespace SequentialFunction {
     }
 }
 
-const int32_t ParallelSolutionBaseline::SOBEL_X[3][3] = {{1, 0, -1},
-                                                         {2, 0, -2},
-                                                         {1, 0, -1}};
-const int32_t ParallelSolutionBaseline::SOBEL_Y[3][3] = {{1,  2,  1},
-                                                         {0,  0,  0},
-                                                         {-1, -2, -1}};
+const int32_t SequentialFunction::SOBEL_X[3][3] = {{1, 0, -1}, {2, 0, -2}, {1, 0, -1}};
+const int32_t SequentialFunction::SOBEL_Y[3][3] = {{1,  2,  1}, {0,  0,  0}, {-1, -2, -1}};
 
 PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **argv) {
-    uchar* input = inputImage.getPixels();
-    uchar* output;
+    uchar3* input = inputImage.getPixels();
+    uchar3* output;
 
     int cur_width = inputImage.getWidth();
+    int height = inputImage.getHeight();
 
     for(int i = 0; i < 10; i++){
-        SequentialSolution::scan(input, cur_width, cur_height, output, i);
+        SequentialSolution::scan(input, cur_width, height, output, i);
 
         cur_width--;
 
