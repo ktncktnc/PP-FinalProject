@@ -32,3 +32,14 @@ void writePnm(uchar3* pixels, int width, int height, char *fileName){
 
     fclose(f);
 }
+
+void drawSobelImg(int* dImg, int width, int height, char* savePath){
+    uchar3* img2draw = (uchar3 *)malloc(width * height * sizeof(uchar3));
+    for(int y = 0; y < height; y++){
+        for(int x = 0; x< width; x++){
+            int idx = y*width+x ;
+            img2draw[idx] = make_uchar3(min(int(dImg[idx]), 255), min(int(dImg[idx]), 255), min(int(dImg[idx]), 255));
+        }
+    }
+    writePnm(img2draw, width, height, savePath);
+}
