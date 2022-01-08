@@ -177,6 +177,10 @@ void SequentialSolution::scan(uchar3* input, int width, int height, uchar3* outp
     // Cal energy
     SequentialFunction::addAbs(gradX, gradY, width, height, grad);
 
+    if (DEBUG_MODE && counter == 0){
+        drawSobelImg(grad, width, height, "grad.pnm");
+    }
+
     // Cal cumulative map
     int *map = (int*) malloc(width * height * sizeof(int));
     SequentialFunction::createCumulativeEnergyMap(grad, width, height, map);

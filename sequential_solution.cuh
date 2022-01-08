@@ -2,6 +2,7 @@
 
 #include "solution.cuh"
 
+#define DEBUG_MODE = true;
 #define DEBUG_IDX = -1;
 
 namespace SequentialFunction{
