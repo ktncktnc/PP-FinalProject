@@ -4,7 +4,7 @@
 using namespace std;
 
 namespace SequentialFunction {
-        void convolution(int *input, int inputWidth, int inputHeight, int *filter, int filterSize, int* output) {
+        void convolution(int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int* output) {
         int index, k_index, k_x, k_y, sum;
 
         //For each pixel in image

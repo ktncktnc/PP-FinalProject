@@ -5,7 +5,7 @@
 #define DEBUG_IDX = -1;
 
 namespace SequentialFunction{
-    void convolution(int *input, int inputWidth, int inputHeight, int *filter, int filterSize, int* output);
+    void convolution(int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int* output);
     void convertToGray(uchar3* input, int width, int height, int* output);
 
     void addAbs(int *input_1, int* input_2, int inputWidth, int inputHeight, int *output);
