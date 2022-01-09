@@ -33,5 +33,5 @@ public:
 
     IntImage scan(const PnmImage &inputImage);
 
-    void scan(uchar3* input, int width, int height, uchar3* output, int counter);
+    uchar3* scan(uchar3* input, int width, int height, int counter);
 };

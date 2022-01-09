@@ -36,7 +36,7 @@ namespace SequentialFunction {
     }
 
     void addAbs(int *input_1, int* input_2, int inputWidth, int inputHeight,
-                 int *output) {
+                int *output) {
         int index, value;
 
         for(int x = 0; x < inputHeight; x++){
@@ -101,7 +101,7 @@ namespace SequentialFunction {
     }
 
     void copyARow(int* input, int width, int height, int rowIdx, int removedIdx, int* output){
-        int output_idx = rowIdx * width, input_idx;
+        int output_idx = rowIdx * (width - 1), input_idx;
 
         for(int i = 0; i < width; i++){
             if(i == removedIdx) continue;
@@ -113,7 +113,7 @@ namespace SequentialFunction {
     }
 
     void copyARow(uchar3* input, int width, int height, int rowIdx, int removedIdx, uchar3* output){
-        int output_idx = rowIdx * width, input_idx;
+        int output_idx = rowIdx * (width - 1), input_idx;
 
         for(int i = 0; i < width; i++){
             if(i == removedIdx) continue;
@@ -141,26 +141,23 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
     int cur_width = inputImage.getWidth();
     int height = inputImage.getHeight();
 
-    printf("cur_width = %d\n", cur_width);
-
-    for(int i = 0; i < 10; i++){
-        SequentialSolution::scan(input, cur_width, height, output, i);
+    for(int i = 0; i < 2; i++){
+        output = SequentialSolution::scan(input, cur_width, height, i);
 
         cur_width--;
 
         input = output;
-
-
     }
 
     return PnmImage(cur_width, height, input);
 }
 
-void SequentialSolution::scan(uchar3* input, int width, int height, uchar3* output, int counter){
+uchar3* SequentialSolution::scan(uchar3* input, int width, int height, int counter){
     int output_width = width - 1;
     int output_height = height;
 
-    output = (uchar3*)malloc(output_width * output_height * sizeof(uchar3));
+
+    uchar3* output = (uchar3*)malloc(output_width * output_height * sizeof(uchar3));
 
     // Convert to gray image
     int *grayImg = (int*)malloc(width * height * sizeof(int));
@@ -178,7 +175,7 @@ void SequentialSolution::scan(uchar3* input, int width, int height, uchar3* outp
     // Cal energy
     SequentialFunction::addAbs(gradX, gradY, width, height, grad);
 
-    if (counter == 0) {
+    if (counter == 1) {
         drawSobelImg(grad, width, height, "grad.pnm");
         drawSobelImg(gradX, width, height, "gradX.pnm");
         drawSobelImg(gradY, width, height, "gradY.pnm");
@@ -194,20 +191,7 @@ void SequentialSolution::scan(uchar3* input, int width, int height, uchar3* outp
 
     SequentialFunction::reduce(input, width, height, path, output);
 
-    printf("width = %d height = %d ", width, height);
-
-    if(counter == 0){
-        writePnm(input, width, height, "input_img.pnm");
-
-        writePnm(output, output_width, height, "debug_img.pnm");
-    }
-
-    free(grayImg);
-    free(gradX);
-    free(gradY);
-    free(grad);
-    free(map);
-    free(path);
+    return output;
 }
 
 //IntImage SequentialSolution::scan(const PnmImage &inputImage) {
