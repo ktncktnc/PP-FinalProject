@@ -61,7 +61,7 @@ namespace SequentialFunction {
                 b = output[(row - 1) * inputWidth + col];
                 c = output[(row - 1) * inputWidth + min(col + 1, inputWidth - 1)];
 
-                output[row * inputWidth + col] = min(min(a, b), c);
+                output[row * inputWidth + col] = input[row * inputWidth + col] + min(min(a, b), c);
             }
         }
     }
@@ -75,8 +75,9 @@ namespace SequentialFunction {
             b = input[row*inputWidth + min_idx];
             c = input[row*inputWidth + min(min_idx + 1, inputWidth - 1)];
 
-            if(min(a, b) > c)
+            if(min(a, b) > c) {
                 offset = 1;
+            }
             else if (min(b, c) > a){
                 offset = -1;
             }
@@ -99,7 +100,7 @@ namespace SequentialFunction {
         return min_idx;
     }
 
-    void copyARow(int32_t* input, int width, int height, int rowIdx, int removedIdx, int* output){
+    void copyARow(int* input, int width, int height, int rowIdx, int removedIdx, int* output){
         int output_idx = rowIdx * width, input_idx;
 
         for(int i = 0; i < width; i++){
@@ -140,6 +141,8 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
     int cur_width = inputImage.getWidth();
     int height = inputImage.getHeight();
 
+    printf("cur_width = %d\n", cur_width);
+
     for(int i = 0; i < 10; i++){
         SequentialSolution::scan(input, cur_width, height, output, i);
 
@@ -147,9 +150,7 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
 
         input = output;
 
-        if(i == 0){
-            writePnm(input, cur_width, height, "debug_img.pnm");
-        }
+
     }
 
     return PnmImage(cur_width, height, input);
@@ -177,8 +178,10 @@ void SequentialSolution::scan(uchar3* input, int width, int height, uchar3* outp
     // Cal energy
     SequentialFunction::addAbs(gradX, gradY, width, height, grad);
 
-    if (counter == 0){
+    if (counter == 0) {
         drawSobelImg(grad, width, height, "grad.pnm");
+        drawSobelImg(gradX, width, height, "gradX.pnm");
+        drawSobelImg(gradY, width, height, "gradY.pnm");
     }
 
     // Cal cumulative map
@@ -190,6 +193,14 @@ void SequentialSolution::scan(uchar3* input, int width, int height, uchar3* outp
     SequentialFunction::findSeamCurve(map, width, height, path);
 
     SequentialFunction::reduce(input, width, height, path, output);
+
+    printf("width = %d height = %d ", width, height);
+
+    if(counter == 0){
+        writePnm(input, width, height, "input_img.pnm");
+
+        writePnm(output, output_width, height, "debug_img.pnm");
+    }
 
     free(grayImg);
     free(gradX);

@@ -19,7 +19,7 @@ namespace SequentialFunction{
 
     void copyARow(int* input, int width, int height, int rowIdx, int removedIdx, int* output);
 
-    void reduce(const uchar3* input, int width, int height, int* path, uchar3* output);
+    void reduce(uchar3* input, int width, int height, int* path, uchar3* output);
 }
 
 class SequentialSolution :public BaseSolution{
