@@ -8,17 +8,11 @@
 namespace SequentialFunction{
     void convolution(int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int* output);
     void convertToGray(uchar3* input, int width, int height, int* output);
-
     void addAbs(int *input_1, int* input_2, int inputWidth, int inputHeight, int *output);
-
     void createCumulativeEnergyMap(int* input, int inputWidth, int inputHeight, int* output);
-
     void findSeamCurve(int* input, int inputWidth, int inputHeight, int* output);
-
     int findMinIndex(int* arr, int size);
-
     void copyARow(int* input, int width, int height, int rowIdx, int removedIdx, int* output);
-
     void reduce(uchar3* input, int width, int height, int* path, uchar3* output);
 }
 
@@ -30,8 +24,6 @@ private:
 
 public:
     PnmImage run(const PnmImage &inputImage, int argc, char **argv) override;
-
     IntImage scan(const PnmImage &inputImage);
-
     uchar3* scan(uchar3* input, int width, int height, int counter);
 };

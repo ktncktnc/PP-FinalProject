@@ -5,6 +5,7 @@
 using namespace std;
 
 namespace SequentialFunction {
+    // Convolution func
     void convolution(int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int* output) {
         int index, k_index, k_x, k_y, sum;
 
@@ -29,14 +30,15 @@ namespace SequentialFunction {
         }
     }
 
+    // Convert RGB to gray
     void convertToGray(uchar3* input, int width, int height, int* output){
         for(int i = 0; i < width * height; i++){
             output[i] = int(0.299f*input[i].x) + int(0.587f*input[i].y) + int(0.114f*input[i].z);
         }
     }
 
-    void addAbs(int *input_1, int* input_2, int inputWidth, int inputHeight,
-                int *output) {
+    // Create energy arr from X and Y
+    void addAbs(int *input_1, int* input_2, int inputWidth, int inputHeight, int *output) {
         int index, value;
 
         for(int x = 0; x < inputHeight; x++){
@@ -49,6 +51,7 @@ namespace SequentialFunction {
         }
     }
 
+    // Create cumulative map
     void createCumulativeEnergyMap(int * input, int inputWidth, int inputHeight, int* output) {
         int a, b, c;
 
@@ -65,6 +68,8 @@ namespace SequentialFunction {
             }
         }
     }
+
+    // Find seam curve from cumulative map
     void findSeamCurve(int* input, int inputWidth, int inputHeight, int* output){
         int a, b, c, min_idx, offset;
         min_idx = findMinIndex(input + (inputHeight - 1)*inputWidth, inputWidth);
@@ -86,6 +91,13 @@ namespace SequentialFunction {
 
             min_idx = min(max(min_idx + offset, 0), inputWidth - 1);
             output[row] = min_idx;
+        }
+    }
+
+    // Remove seam curve from image
+    void reduce(uchar3* input, int width, int height, int* path, uchar3* output){
+        for(int i = 0; i < height; i++){
+            copyARow(input, width, height, i, path[i], output);
         }
     }
 
@@ -123,12 +135,6 @@ namespace SequentialFunction {
             output_idx++;
         }
     }
-
-    void reduce(uchar3* input, int width, int height, int* path, uchar3* output){
-        for(int i = 0; i < height; i++){
-            copyARow(input, width, height, i, path[i], output);
-        }
-    }
 }
 
 const int SequentialSolution::SOBEL_X[9] = {1, 0, -1, 2, 0, -2, 1, 0, -1};
@@ -143,9 +149,7 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
 
     for(int i = 0; i < 2; i++){
         output = SequentialSolution::scan(input, cur_width, height, i);
-
         cur_width--;
-
         input = output;
     }
 
@@ -155,7 +159,6 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
 uchar3* SequentialSolution::scan(uchar3* input, int width, int height, int counter){
     int output_width = width - 1;
     int output_height = height;
-
 
     uchar3* output = (uchar3*)malloc(output_width * output_height * sizeof(uchar3));
 
@@ -175,12 +178,6 @@ uchar3* SequentialSolution::scan(uchar3* input, int width, int height, int count
     // Cal energy
     SequentialFunction::addAbs(gradX, gradY, width, height, grad);
 
-    if (counter == 1) {
-        drawSobelImg(grad, width, height, "grad.pnm");
-        drawSobelImg(gradX, width, height, "gradX.pnm");
-        drawSobelImg(gradY, width, height, "gradY.pnm");
-    }
-
     // Cal cumulative map
     int *map = (int*) malloc(width * height * sizeof(int));
     SequentialFunction::createCumulativeEnergyMap(grad, width, height, map);
@@ -189,24 +186,12 @@ uchar3* SequentialSolution::scan(uchar3* input, int width, int height, int count
     int *path = (int*) malloc(height * sizeof(int));
     SequentialFunction::findSeamCurve(map, width, height, path);
 
+    // Remove seam curve
     SequentialFunction::reduce(input, width, height, path, output);
 
     return output;
 }
 
-//IntImage SequentialSolution::scan(const PnmImage &inputImage) {
-//    uchar* input = inputImage.getPixels();
-//    uchar* output;
-//
-//    int cur_width = inputImage.getWidth();
-//
-//    for(int i = 0; i < 10; i++){
-//        SequentialSolution::scan(input, cur_width, cur_height, output, i);
-//
-//        cur_width--;
-//
-//        input = output;
-//    }
-//
-//    return new IntImage()
-//}
+IntImage SequentialSolution::scan(const PnmImage &inputImage) {
+    return new IntImage(1, 1);
+}
