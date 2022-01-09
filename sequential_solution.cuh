@@ -13,6 +13,7 @@ namespace SequentialFunction{
     void findSeamCurve(int* input, int inputWidth, int inputHeight, int* output);
     int findMinIndex(int* arr, int size);
     void copyARow(int* input, int width, int height, int rowIdx, int removedIdx, int* output);
+    void copyARow(uchar3* input, int width, int height, int rowIdx, int removedIdx, uchar3* output);
     void reduce(uchar3* input, int width, int height, int* path, uchar3* output);
 }
 

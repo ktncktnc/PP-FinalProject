@@ -99,8 +99,6 @@ public:
         this->pixels = (int3 *) malloc(width * height * sizeof(int3));
     }
 
-    IntImage(uint32_t width, uint32_t height, int)
-
     IntImage(const IntImage &ref) {
         this->width = ref.width;
         this->height = ref.height;

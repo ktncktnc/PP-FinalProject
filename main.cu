@@ -37,6 +37,5 @@ int main(int argc, char **argv) {
 
     free(sequentialSolution);
     //free(parallelSolution);
-    printf("Ok");
     return 0;
 }
