@@ -1,6 +1,7 @@
 #include "sequential_solution.cuh"
 #include "utils.cuh"
 #include <iostream>
+#include <string>
 
 using namespace std;
 
@@ -141,13 +142,18 @@ const int SequentialSolution::SOBEL_X[9] = {1, 0, -1, 2, 0, -2, 1, 0, -1};
 const int SequentialSolution::SOBEL_Y[9] = {1, 2, 1, 0, 0, 0, -1, -2, -1};
 
 PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **argv) {
+    if (argc < 1){
+        printf("The number of arguments is invalid\n");
+        return PnmImage(inputImage.getWidth(), inputImage.getHeight(), null);
+    }
+    int time = stoi(argv[0], nullptr);
     uchar3* input = inputImage.getPixels();
     uchar3* output;
 
     int cur_width = inputImage.getWidth();
     int height = inputImage.getHeight();
 
-    for(int i = 0; i < 2; i++){
+    for(int i = 0; i < time; i++){
         output = SequentialSolution::scan(input, cur_width, height, i);
         cur_width--;
         input = output;
