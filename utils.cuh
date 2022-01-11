@@ -12,3 +12,7 @@
 }
 
 void printDeviceInfo();
+
+void writePnm(uchar3* pixels, int width, int height, char *fileName);
+
+void drawSobelImg(int* dImg, int width, int height, char* savePath);

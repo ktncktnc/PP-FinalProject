@@ -1,4 +1,3 @@
-#include "timer.cuh"
 #include "image.cuh"
 #include "utils.cuh"
 #include "solution.cuh"
@@ -32,6 +31,7 @@ int main(int argc, char **argv) {
 
     outputImageSequential.write("output_sequential.pnm");
     outputImageParallel.write("output_parallel.pnm");
+
 
     outputImageSequential.compare(outputImageParallel);
 

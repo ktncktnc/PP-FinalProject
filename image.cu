@@ -3,7 +3,7 @@
 void PnmImage::read(const char *fileName) {
     if (pixels)
         free(pixels);
-    
+
     FILE *f = fopen(fileName, "r");
     if (f == nullptr) {
         printf("Cannot read %s\n", fileName);
@@ -57,7 +57,7 @@ void PnmImage::write(const char *fileName) {
 void PnmImage::compare(const PnmImage &other) {
     float err = 0;
     if (this->height != other.height || this->width != other.width)
-        err = float(this->width * this->height * 255);
+        err = -1;
     else
         err = computeError(this->pixels, other.pixels, width * height);
     printf("Error: %f\n", err);
@@ -70,7 +70,7 @@ float PnmImage::computeError(uchar3 *a1, uchar3 *a2, uint32_t n) {
         err += abs((int) a1[i].y - (int) a2[i].y);
         err += abs((int) a1[i].z - (int) a2[i].z);
     }
-    return float(err) / float(n * 3);
+    return float(double(err) / double(n * 3));
 }
 
 uint32_t PnmImage::getWidth() const {

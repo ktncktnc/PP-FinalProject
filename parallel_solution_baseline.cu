@@ -43,7 +43,7 @@ namespace KernelFunction {
         u_int32_t c = blockIdx.x * blockDim.x + threadIdx.x;
         if (r < inputHeight && c < inputWidth) {
             u_int32_t i = r * inputWidth + c;
-            output[i] = abs(input_1[i] + input_2[i]);
+            output[i] = abs(input_1[i]) + abs(input_2[i]);
         }
     }
 
@@ -97,7 +97,7 @@ PnmImage ParallelSolutionBaseline::run(const PnmImage &inputImage, int argc, cha
     timer.Start();
 
     PnmImage outputImage = inputImage;
-    for (int i = 0; i <= nDeletingSeams; ++i) {
+    for (int i = 0; i < nDeletingSeams; ++i) {
         // 1. Convert to GrayScale
         IntImage grayImage = convertToGrayScale(outputImage, blockSize);
         // 2. Calculate the Energy Map
@@ -107,6 +107,7 @@ PnmImage ParallelSolutionBaseline::run(const PnmImage &inputImage, int argc, cha
         // 4. Extract the seam
         auto *seam = (uint32_t *) malloc(energyMap.getHeight() * sizeof(uint32_t));
         extractSeam(seamMap, seam);
+
         // 5. Delete the seam
         outputImage = deleteSeam(outputImage, seam);
         free(seam);
@@ -260,7 +261,6 @@ void ParallelSolutionBaseline::extractSeam(const IntImage &energyMap, uint32_t *
                 minValC = c - 1;
             }
         }
-
         if (c + 1 < energyMap.getWidth()) {
             if (energyMap.getPixels()[KernelFunction::convertIndex(r, c + 1, energyMap.getWidth())] <
                 energyMap.getPixels()[KernelFunction::convertIndex(r, minValC, energyMap.getWidth())]) {
@@ -282,7 +282,7 @@ PnmImage ParallelSolutionBaseline::deleteSeam(const PnmImage &inputImage, uint32
     u_int32_t *d_seam;
     CHECK(cudaMalloc(&d_seam, outputImage.getHeight() * sizeof(u_int32_t)))
     uchar3 *d_outputImage;
-    CHECK(cudaMalloc(&d_outputImage, (outputImage.getWidth() - 1) * outputImage.getHeight() * sizeof(uchar3)))
+    CHECK(cudaMalloc(&d_outputImage, outputImage.getWidth() * outputImage.getHeight() * sizeof(uchar3)))
 
     // Copy Memory from Host to Device
     CHECK(cudaMemcpy(d_inputImage, inputImage.getPixels(),
@@ -297,7 +297,7 @@ PnmImage ParallelSolutionBaseline::deleteSeam(const PnmImage &inputImage, uint32
 
     // Copy Memory from Device to Host
     CHECK(cudaMemcpy(outputImage.getPixels(), d_outputImage,
-                     (outputImage.getWidth() - 1) * outputImage.getHeight() * sizeof(uchar3), cudaMemcpyDeviceToHost))
+                     outputImage.getWidth() * outputImage.getHeight() * sizeof(uchar3), cudaMemcpyDeviceToHost))
 
     // Free Device Memory
     CHECK(cudaFree(d_inputImage))

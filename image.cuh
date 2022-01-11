@@ -24,6 +24,12 @@ public:
         this->pixels = (uchar3 *) malloc(width * height * sizeof(uchar3));
     }
 
+    PnmImage(uint32_t width, uint32_t height, uchar3* pixels) {
+        this->width = width;
+        this->height = height;
+        this->pixels = pixels;
+    }
+
     PnmImage(const PnmImage &ref) {
         this->width = ref.width;
         this->height = ref.height;
