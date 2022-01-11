@@ -35,7 +35,6 @@ int main(int argc, char **argv) {
 
     outputImageSequential.compare(outputImageParallel);
 
-
     free(sequentialSolution);
     free(parallelSolution);
     return 0;

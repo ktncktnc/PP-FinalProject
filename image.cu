@@ -95,6 +95,6 @@ uint32_t IntImage::getHeight() const {
     return height;
 }
 
-int3 *IntImage::getPixels() const {
+int32_t *IntImage::getPixels() const {
     return pixels;
 }

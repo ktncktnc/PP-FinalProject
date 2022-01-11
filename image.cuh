@@ -72,14 +72,14 @@ public:
 class IntImage {
 private:
     uint32_t width, height;
-    int3 *pixels;
+    int32_t *pixels;
 
 public:
     uint32_t getWidth() const;
 
     uint32_t getHeight() const;
 
-    int3 *getPixels() const;
+    int32_t *getPixels() const;
 
     IntImage() {
         width = 0;
@@ -90,7 +90,7 @@ public:
     IntImage(uint32_t width, uint32_t height) {
         this->width = width;
         this->height = height;
-        this->pixels = (int3 *) malloc(width * height * sizeof(int3));
+        this->pixels = (int32_t *) malloc(width * height * sizeof(int32_t));
     }
 
     IntImage(const IntImage &ref) {
@@ -98,8 +98,8 @@ public:
         this->height = ref.height;
         this->pixels = nullptr;
         if (ref.pixels) {
-            pixels = (int3 *) malloc(width * height * sizeof(int3));
-            memcpy(pixels, ref.pixels, width * height * sizeof(int3));
+            pixels = (int32_t *) malloc(width * height * sizeof(int32_t));
+            memcpy(pixels, ref.pixels, width * height * sizeof(int32_t));
         }
     }
 
@@ -111,11 +111,27 @@ public:
         this->width = ref.width;
         this->height = ref.height;
         if (ref.pixels) {
-            pixels = (int3 *) malloc(width * height * sizeof(int3));
-            memcpy(pixels, ref.pixels, width * height * sizeof(int3));
+            pixels = (int32_t *) malloc(width * height * sizeof(int32_t));
+            memcpy(pixels, ref.pixels, width * height * sizeof(int32_t));
         }
         return *this;
     }
+
+    explicit operator PnmImage() const {
+        PnmImage outputImage = PnmImage(this->width, this->height);
+        if (!this->pixels) return outputImage;
+        for (int i = 0; i < this->height * this->width; ++i) {
+            int32_t temp = this->pixels[i];
+            if (temp > 255)
+                temp = 255;
+            if (temp < 0)
+                temp = 0;
+            outputImage.getPixels()[i] = make_uchar3((char) temp, (char) temp,
+                                                     (char) temp);
+        }
+        return outputImage;
+    }
+
 
     ~IntImage() {
         if (pixels)
