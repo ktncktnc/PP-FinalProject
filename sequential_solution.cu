@@ -1,6 +1,6 @@
 #include "sequential_solution.cuh"
 #include "utils.cuh"
-#include <iostream>
+#include "timer.cuh"
 #include <string>
 
 using namespace std;
@@ -138,16 +138,27 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
     int cur_width = inputImage.getWidth();
     int height = inputImage.getHeight();
 
+    printf("Running Baseline Sequential Solution\n");
+
+    GpuTimer timer;
+    timer.Start();
+
     for (int i = 0; i < nDeletingSeams; i++) {
         output = SequentialSolution::scan(input, cur_width, height, i);
         cur_width--;
+        if (i > 0)
+            free(input);
         input = output;
     }
+
+    timer.Stop();
+    printf("Time: %.3f ms\n", timer.Elapsed());
+    printf("-------------------------------\n");
 
     return PnmImage(cur_width, height, input);
 }
 
-uchar3 *SequentialSolution::scan(uchar3 *input, int width, int height, int counter) {
+uchar3* SequentialSolution::scan(uchar3 *input, int width, int height, int counter) {
     int output_width = width - 1;
     int output_height = height;
 
@@ -179,6 +190,13 @@ uchar3 *SequentialSolution::scan(uchar3 *input, int width, int height, int count
 
     // Remove seam curve
     SequentialFunction::reduce(input, width, height, path, output);
+
+    free(grayImg);
+    free(gradX);
+    free(gradY);
+    free(grad);
+    free(map);
+    free(path);
 
     return output;
 }
