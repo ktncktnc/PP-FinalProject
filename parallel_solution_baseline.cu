@@ -107,7 +107,11 @@ PnmImage ParallelSolutionBaseline::run(const PnmImage &inputImage, int argc, cha
         // 4. Extract the seam
         auto *seam = (uint32_t *) malloc(energyMap.getHeight() * sizeof(uint32_t));
         extractSeam(seamMap, seam);
-
+        if (i == 0) {
+            for (int j = 0; j < energyMap.getHeight(); ++j)
+                printf("%d ", seam[j]);
+            printf("\n");
+        }
         // 5. Delete the seam
         outputImage = deleteSeam(outputImage, seam);
         free(seam);
@@ -250,13 +254,12 @@ void ParallelSolutionBaseline::extractSeam(const IntImage &energyMap, uint32_t *
                                                                energyMap.getWidth())]) {
             minValC = c;
         }
-
     // Trace back
     seam[energyMap.getHeight() - 1] = minValC;
     for (int r = int(energyMap.getHeight() - 2); r >= 0; r--) {
         auto c = minValC;
         if (c > 0) {
-            if (energyMap.getPixels()[KernelFunction::convertIndex(r, c - 1, energyMap.getWidth())] <
+            if (energyMap.getPixels()[KernelFunction::convertIndex(r, c - 1, energyMap.getWidth())] <=
                 energyMap.getPixels()[KernelFunction::convertIndex(r, minValC, energyMap.getWidth())]) {
                 minValC = c - 1;
             }

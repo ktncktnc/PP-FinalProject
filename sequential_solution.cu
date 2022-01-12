@@ -74,7 +74,7 @@ namespace SequentialFunction {
             c = input[row * inputWidth + min(min_idx + 1, inputWidth - 1)];
             offset = 0;
             best = b;
-            if (a < best) {
+            if (a <= best) {
                 best = a;
                 offset = -1;
             }
