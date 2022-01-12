@@ -22,19 +22,19 @@ namespace KernelFunction {
                         int32_t currentRow);
 
     __global__ void
-    deleteSeamKernel(const uchar3 *input, u_int32_t inputWidth, u_int32_t inputHeight, const u_int32_t * seam, uchar3 *output);
+    deleteSeamKernel(const uchar3 *input, u_int32_t inputWidth, u_int32_t inputHeight, const u_int32_t *seam,
+                     uchar3 *output);
 
 }
 
 class ParallelSolutionBaseline : public BaseSolution {
-private:
+protected:
     static const u_int32_t FILTER_SIZE = 3;
     static const int32_t SOBEL_X[3][3];
     static const int32_t SOBEL_Y[3][3];
 
     static IntImage calculateSeamMap(const IntImage &inputImage, uint32_t blockSize = 32);
 
-protected:
     static IntImage convertToGrayScale(const PnmImage &inputImage, dim3 blockSize = dim3(32, 32));
 
     static IntImage calculateEnergyMap(const IntImage &inputImage, dim3 blockSize = dim3(32, 32));
