@@ -1,0 +1,14 @@
+//
+// Created by phuc on 12/01/2022.
+//
+
+#ifndef FINALPROJECT_PARALLEL_SOLUTION_V3_CUH
+#define FINALPROJECT_PARALLEL_SOLUTION_V3_CUH
+
+
+class parallel_solution_v3 {
+
+};
+
+
+#endif //FINALPROJECT_PARALLEL_SOLUTION_V3_CUH
