@@ -32,15 +32,16 @@ private:
     static const int32_t SOBEL_X[3][3];
     static const int32_t SOBEL_Y[3][3];
 
+    static IntImage calculateSeamMap(const IntImage &inputImage, uint32_t blockSize = 32);
+
+protected:
     static IntImage convertToGrayScale(const PnmImage &inputImage, dim3 blockSize = dim3(32, 32));
 
     static IntImage calculateEnergyMap(const IntImage &inputImage, dim3 blockSize = dim3(32, 32));
 
-    static IntImage calculateSeamMap(const IntImage &inputImage, uint32_t blockSize = 32);
+    static PnmImage deleteSeam(const PnmImage &inputImage, uint32_t *seam, dim3 blockSize = dim3(32, 32));
 
     static void extractSeam(const IntImage &energyMap, uint32_t *seam);
-
-    static PnmImage deleteSeam(const PnmImage &inputImage, uint32_t *seam, dim3 blockSize = dim3(32, 32));
 
 public:
     PnmImage run(const PnmImage &inputImage, int argc, char **argv) override;
