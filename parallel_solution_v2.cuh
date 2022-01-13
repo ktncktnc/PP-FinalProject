@@ -5,8 +5,9 @@
 #ifndef FINALPROJECT_PARALLEL_SOLUTION_V2_CUH
 #define FINALPROJECT_PARALLEL_SOLUTION_V2_CUH
 
+#include "parallel_solution_baseline.cuh"
 
-class ParallelSolutionV2 : protected ParallelSolutionBaseline{
+class ParallelSolutionV2 : public ParallelSolutionBaseline{
     static IntImage calculateEnergyMap(const IntImage &inputImage, dim3 blockSize = dim3(32, 32));
     PnmImage run(const PnmImage &inputImage, int argc, char **argv);
 };
