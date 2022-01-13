@@ -53,7 +53,7 @@ namespace KernelFunction {
     }
 }
 
-static IntImage ParallelSolutionV2::calculateEnergyMap(const IntImage &inputImage, dim3 blockSize = dim3(32, 32)){
+IntImage ParallelSolutionV2::calculateEnergyMap(const IntImage &inputImage, dim3 blockSize = dim3(32, 32)){
     // Create Host Memory
     dim3 gridSize((inputImage.getWidth() - 1) / blockSize.x + 1, (inputImage.getHeight() - 1) / blockSize.y + 1);
     IntImage outputImage = IntImage(inputImage.getWidth(), inputImage.getHeight());
