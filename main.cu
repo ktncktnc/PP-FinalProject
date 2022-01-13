@@ -31,15 +31,16 @@ int main(int argc, char **argv) {
     BaseSolution *parallelSolutionV3 = new ParallelSolutionV3();
 
     PnmImage outputImageSequential = sequentialSolution->run(inputImage, argc - 2, argv + 2);
-    //PnmImage outputImageParallel = parallelSolution->run(inputImage, argc - 2, argv + 2);
+    PnmImage outputImageParallel = parallelSolution->run(inputImage, argc - 2, argv + 2);
     PnmImage outputImageParallelV2 = parallelSolutionV2->run(inputImage, argc - 2, argv + 2);
     //PnmImage outputImageParallelV3 = parallelSolutionV3->run(inputImage, argc - 2, argv + 2);
 
     outputImageSequential.write("output_sequential.pnm");
-    //outputImageParallel.write("output_parallel.pnm");
+    outputImageParallel.write("output_parallel.pnm");
     outputImageParallelV2.write("output_parallelV2.pnm");
     //outputImageParallelV3.write("output_parallelV3.pnm");
 
+    outputImageSequential.compare(outputImageParallel);
     outputImageSequential.compare(outputImageParallelV2);
     //outputImageSequential.compare(outputImageParallelV3);
 
