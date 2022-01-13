@@ -12,27 +12,27 @@ namespace KernelFunction {
                       u_int32_t filterSize, int32_t *output) {
         extern __shared__ int32_t s_input[];
 
-        int s_width = blockDim.x + filterSize - 1;
-        int s_height = blockDim.y + filterSize - 1;
+        u_int32_t s_width = blockDim.x + filterSize - 1;
+        u_int32_t s_height = blockDim.y + filterSize - 1;
 
         u_int32_t out_r = blockIdx.y * blockDim.y + threadIdx.y;
         u_int32_t out_c = blockIdx.x * blockDim.x + threadIdx.x;
         u_int32_t out_idx = convertIndex(out_r, out_c, width);
 
-        int sharedGridSize = (s_width*s_height)/(blockDim.x*blockDim.y);
+        u_int32_t sharedGridSize = (s_width*s_height)/(blockDim.x*blockDim.y);
         for(int i = 0; i <= sharedGridSize; i++){
             u_int32_t shared_idx = threadIdx.y*blockDim.x + threadIdx.x + i*(blockDim.x*blockDim.y);
             u_int32_t shared_r = shared_idx / s_width;
             u_int32_t shared_c = shared_idx % s_width;
 
-            int gIdx_r = shared_r - filterSize/2 + blockIdx.y * blockDim.y;
-            int gIdx_c = shared_c - filterSize/2 + blockIdx.x * blockDim.x;
+            int32_t gIdx_r = shared_r - filterSize/2 + blockIdx.y * blockDim.y;
+            int32_t gIdx_c = shared_c - filterSize/2 + blockIdx.x * blockDim.x;
             gIdx_c = max(0, min(width - 1, gIdx_c));
             gIdx_r = max(0, min(height - 1, gIdx_r));
-            int g_idx = convertIndex(gIdx_r, gIdx_c, width);
+            uint32_t g_idx = convertIndex(gIdx_r, gIdx_c, width);
 
             if (shared_c < s_width && shared_r < s_height)
-                s_input[shared_idx] = input[g_idx];
+                s_input[shared_r * s_width + shared_c] = input[g_idx];
         }
         __syncthreads();
 
@@ -121,7 +121,7 @@ PnmImage ParallelSolutionV2::run(const PnmImage &inputImage, int argc, char **ar
         blockSize.x = strtol(argv[1], nullptr, 10);
         blockSize.y = strtol(argv[2], nullptr, 10);
     }
-    printf("Running Parallel Solution v2 with blockSize=(%d;%d).\n", blockSize.x, blockSize.y);
+    printf("Running Baseline Parallel Solution with blockSize=(%d;%d).\n", blockSize.x, blockSize.y);
     GpuTimer timer;
     timer.Start();
 
