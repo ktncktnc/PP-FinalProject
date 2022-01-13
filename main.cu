@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     outputImageParallelV2.write("output_parallelV2.pnm");
     //outputImageParallelV3.write("output_parallelV3.pnm");
 
-    outputImageParallel.compare(outputImageParallelV2);
+    outputImageSequential.compare(outputImageParallelV2);
     //outputImageSequential.compare(outputImageParallelV3);
 
     free(sequentialSolution);
