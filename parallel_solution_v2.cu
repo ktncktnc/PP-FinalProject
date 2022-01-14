@@ -32,7 +32,7 @@ namespace KernelFunction {
             uint32_t g_idx = convertIndex(gIdx_r, gIdx_c, width);
 
             if (shared_c < s_width && shared_r < s_height)
-                s_input[shared_r * s_width + shared_c] = input[g_idx];
+                s_input[shared_idx] = input[g_idx];
         }
         __syncthreads();
 
@@ -50,7 +50,7 @@ namespace KernelFunction {
                 outPixel += inPixel * filterVal;
             }
         }
-        output[out_idx] = outPixel;
+        output[out_idx] = (int)outPixel;
     }
 }
 
