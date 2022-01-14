@@ -103,7 +103,7 @@ PnmImage ParallelSolutionBaseline::run(const PnmImage &inputImage, int argc, cha
         // 2. Calculate the Energy Map
         IntImage energyMap = calculateEnergyMap(grayImage, blockSize);
         // 3. Dynamic Programming
-        IntImage seamMap = calculateSeamMap(energyMap, blockSize.x);
+        IntImage seamMap = calculateSeamMap(energyMap, blockSize.x * blockSize.y);
         // 4. Extract the seam
         auto *seam = (uint32_t *) malloc(energyMap.getHeight() * sizeof(uint32_t));
         extractSeam(seamMap, seam);
