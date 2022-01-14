@@ -31,5 +31,5 @@ private:
 public:
     PnmImage run(const PnmImage &inputImage, int argc, char **argv) override;
 
-    uchar3* scan(uchar3 *input, int width, int height, int counter);
+    uchar3 *scan(uchar3 *input, int width, int height, int counter);
 };

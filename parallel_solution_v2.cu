@@ -8,7 +8,7 @@
 namespace KernelFunction {
     __global__ void
     convolutionKernel_v2(const int32_t *input, u_int32_t width, u_int32_t height, const int32_t *filter,
-                      u_int32_t filterSize, int32_t *output) {
+                         u_int32_t filterSize, int32_t *output) {
         extern __shared__ int32_t s_input[];
 
         u_int32_t s_width = blockDim.x + filterSize - 1;
@@ -18,46 +18,47 @@ namespace KernelFunction {
         u_int32_t out_c = blockIdx.x * blockDim.x + threadIdx.x;
         u_int32_t out_idx = convertIndex(out_r, out_c, width);
 
-        u_int32_t sharedGridSize = (s_width*s_height)/(blockDim.x*blockDim.y);
-        for(int i = 0; i <= sharedGridSize; i++){
-            u_int32_t shared_idx = threadIdx.y*blockDim.x + threadIdx.x + i*(blockDim.x*blockDim.y);
+        u_int32_t sharedGridSize = (s_width * s_height) / (blockDim.x * blockDim.y);
+        for (int i = 0; i <= sharedGridSize; i++) {
+            u_int32_t shared_idx = threadIdx.y * blockDim.x + threadIdx.x + i * (blockDim.x * blockDim.y);
             u_int32_t shared_r = shared_idx / s_width;
             u_int32_t shared_c = shared_idx % s_width;
 
-            int32_t gIdx_r = shared_r - filterSize/2 + blockIdx.y * blockDim.y;
-            int32_t gIdx_c = shared_c - filterSize/2 + blockIdx.x * blockDim.x;
-            gIdx_c = max(0, min(width - 1, gIdx_c));
-            gIdx_r = max(0, min(height - 1, gIdx_r));
+            int32_t gIdx_r = (int32_t) shared_r - (int32_t) (filterSize) / 2 + int32_t(blockIdx.y * blockDim.y);
+            int32_t gIdx_c = (int32_t) shared_c - int32_t(filterSize) / 2 + int32_t(blockIdx.x * blockDim.x);
+            gIdx_c = max(0, min(int32_t(width) - 1, gIdx_c));
+            gIdx_r = max(0, min(int32_t(height) - 1, gIdx_r));
             uint32_t g_idx = convertIndex(gIdx_r, gIdx_c, width);
 
             if (shared_c < s_width && shared_r < s_height)
                 s_input[shared_idx] = input[g_idx];
         }
+        
         __syncthreads();
 
         if (out_c >= width || out_r >= height) return;
         int32_t outPixel = 0;
 
         for (int32_t k_r = -int(filterSize / 2); k_r <= int(filterSize / 2); ++k_r) {
-            u_int32_t in_r = threadIdx.y + filterSize/2 + k_r;
+            u_int32_t in_r = threadIdx.y + filterSize / 2 + k_r;
 
             for (int32_t k_c = -int(filterSize / 2); k_c <= int(filterSize / 2); ++k_c) {
-                uint32_t in_c = threadIdx.x + filterSize/2 + k_c;
+                uint32_t in_c = threadIdx.x + filterSize / 2 + k_c;
 
                 int32_t inPixel = s_input[convertIndex(in_r, in_c, s_width)];
                 int32_t filterVal = filter[convertIndex(k_r + filterSize / 2, k_c + filterSize / 2, filterSize)];
                 outPixel += inPixel * filterVal;
             }
         }
-        output[out_idx] = (int)outPixel;
+        output[out_idx] = outPixel;
     }
 }
 
-IntImage ParallelSolutionV2::calculateEnergyMap(const IntImage &inputImage, dim3 blockSize){
+IntImage ParallelSolutionV2::calculateEnergyMap(const IntImage &inputImage, dim3 blockSize) {
     // Create Host Memory
     dim3 gridSize((inputImage.getWidth() - 1) / blockSize.x + 1, (inputImage.getHeight() - 1) / blockSize.y + 1);
     IntImage outputImage = IntImage(inputImage.getWidth(), inputImage.getHeight());
-    size_t smemSize = (blockSize.x + FILTER_SIZE - 1)*(blockSize.y + FILTER_SIZE - 1)*sizeof(int32_t);
+    size_t smemSize = (blockSize.x + FILTER_SIZE - 1) * (blockSize.y + FILTER_SIZE - 1) * sizeof(int32_t);
 
     // Create Device Memory
     int32_t *d_filterX;
@@ -121,7 +122,7 @@ PnmImage ParallelSolutionV2::run(const PnmImage &inputImage, int argc, char **ar
         blockSize.x = strtol(argv[1], nullptr, 10);
         blockSize.y = strtol(argv[2], nullptr, 10);
     }
-    printf("Running Baseline Parallel Solution with blockSize=(%d;%d).\n", blockSize.x, blockSize.y);
+    printf("Running Parallel Solution Version 2 with blockSize=(%d;%d).\n", blockSize.x, blockSize.y);
     GpuTimer timer;
     timer.Start();
 
