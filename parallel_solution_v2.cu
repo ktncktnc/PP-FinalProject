@@ -41,9 +41,11 @@ namespace KernelFunction {
 
         for (int32_t k_r = -int(filterSize / 2); k_r <= int(filterSize / 2); ++k_r) {
             u_int32_t in_r = threadIdx.y + filterSize/2 + k_r;
+            in_r = min(max(in_r, s_height - 1), 0);
 
             for (int32_t k_c = -int(filterSize / 2); k_c <= int(filterSize / 2); ++k_c) {
                 uint32_t in_c = threadIdx.x + filterSize/2 + k_c;
+                in_c = min(max(in_c, s_width - 1), 0);
 
                 int32_t inPixel = s_input[convertIndex(in_r, in_c, s_width)];
                 int32_t filterVal = filter[convertIndex(k_r + filterSize / 2, k_c + filterSize / 2, filterSize)];
@@ -92,6 +94,7 @@ IntImage ParallelSolutionV2::calculateEnergyMap(const IntImage &inputImage, dim3
     KernelFunction::addAbsKernel<<<gridSize, blockSize>>>(d_outputImageX, d_outputImageY, outputImage.getWidth(), outputImage.getHeight(), d_outputImage);
     cudaDeviceSynchronize();
     CHECK(cudaGetLastError())
+
 
     // Copy Memory from Device to Host
     CHECK(cudaMemcpy(outputImage.getPixels(), d_outputImage,
