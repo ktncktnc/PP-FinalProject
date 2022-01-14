@@ -87,11 +87,6 @@ PnmImage ParallelSolutionV3::run(const PnmImage &inputImage, int argc, char **ar
         // 4. Extract the seam
         auto *seam = (uint32_t *) malloc(energyMap.getHeight() * sizeof(uint32_t));
         extractSeam(seamMap, seam);
-        if (i == 0) {
-            for (int j = 0; j < energyMap.getHeight(); ++j)
-                printf("%d ", seam[j]);
-            printf("\n");
-        }
         // 5. Delete the seam
         outputImage = deleteSeam(outputImage, seam);
         free(seam);

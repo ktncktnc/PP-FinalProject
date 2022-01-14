@@ -24,7 +24,7 @@ namespace KernelFunction {
             u_int32_t shared_r = shared_idx / s_width;
             u_int32_t shared_c = shared_idx % s_width;
 
-            int32_t gIdx_r = (int32_t) shared_r - (int32_t) (filterSize) / 2 + int32_t(blockIdx.y * blockDim.y);
+            int32_t gIdx_r = (int32_t) shared_r - int32_t(filterSize) / 2 + int32_t(blockIdx.y * blockDim.y);
             int32_t gIdx_c = (int32_t) shared_c - int32_t(filterSize) / 2 + int32_t(blockIdx.x * blockDim.x);
             gIdx_c = max(0, min(int32_t(width) - 1, gIdx_c));
             gIdx_r = max(0, min(int32_t(height) - 1, gIdx_r));
@@ -33,7 +33,7 @@ namespace KernelFunction {
             if (shared_c < s_width && shared_r < s_height)
                 s_input[shared_idx] = input[g_idx];
         }
-        
+
         __syncthreads();
 
         if (out_c >= width || out_r >= height) return;
@@ -137,11 +137,6 @@ PnmImage ParallelSolutionV2::run(const PnmImage &inputImage, int argc, char **ar
         // 4. Extract the seam
         auto *seam = (uint32_t *) malloc(energyMap.getHeight() * sizeof(uint32_t));
         extractSeam(seamMap, seam);
-        if (i == 0) {
-            for (int j = 0; j < energyMap.getHeight(); ++j)
-                printf("%d ", seam[j]);
-            printf("\n");
-        }
         // 5. Delete the seam
         outputImage = deleteSeam(outputImage, seam);
         free(seam);
