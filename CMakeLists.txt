@@ -7,3 +7,6 @@ add_executable(FinalProject utils.cu image.cu timer.cu solution.cu sequential_so
 
 set_target_properties(FinalProject PROPERTIES
         CUDA_SEPARABLE_COMPILATION ON)
+
+# For colab (cuncomment below)
+#string(APPEND CMAKE_CUDA_FLAGS " -gencode arch=compute_37,code=sm_37")
