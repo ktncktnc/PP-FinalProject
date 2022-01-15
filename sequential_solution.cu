@@ -162,14 +162,14 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
     return outputImage;
 }
 
-IntImage SequentialSolution:convertToGrayScale(const PnmImage &inputImage){
+IntImage SequentialSolution::convertToGrayScale(const PnmImage &inputImage){
     IntImage outputImage = IntImage(inputImage.getWidth(), inputImage.getHeight());
     SequentialFunction::convertToGray(input, inputImage.getWidth(), inputImage.getHeight(), outputImage.getPixels());
 
     return outputImage;
 }
 
-IntImage SequentialSolution:calculateSeamMap(const IntImage &inputImage){
+IntImage SequentialSolution::calculateSeamMap(const IntImage &inputImage){
     uint32_t width = inputImage.getWidth(), height = inputImage.getHeight();
 
     IntImage gradX = IntImage(inputImage.getWidth(), inputImage.getHeight());
@@ -185,18 +185,18 @@ IntImage SequentialSolution:calculateSeamMap(const IntImage &inputImage){
     return grad;
 }
 
-IntImage SequentialSolution:calculateEnergyMap(const IntImage &inputImage){
+IntImage SequentialSolution::calculateEnergyMap(const IntImage &inputImage){
     IntImage map = IntImage(inputImage.getWidth(), inputImage.getHeight());
     SequentialFunction::createCumulativeEnergyMap(inputImage.getPixels(), inputImage.getWidth(), inputImage.getHeight(), map.getPixels());
 
     return map;
 };
 
-void SequentialSolution:extractSeam(const IntImage &energyMap, uint32_t *seam){
+void SequentialSolution::extractSeam(const IntImage &energyMap, uint32_t *seam){
     SequentialFunction::findSeamCurve(energyMap.getPixels(), energyMap.getWidth(), energyMap.getHeight(), seam);
 };
 
-PnmImage SequentialSolution:deleteSeam(const PnmImage &inputImage, uint32_t *seam){
+PnmImage SequentialSolution::deleteSeam(const PnmImage &inputImage, uint32_t *seam){
     PnmImage outputImage = PnmImage(inputImage.getWidth() - 1, inputImage.getHeight());
 
     SequentialFunction::reduce(inputImage.getPixels(), inputImage.getWidth(), inputImage.getHeight(), seam, outputImage.getPixels());
