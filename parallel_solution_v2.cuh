@@ -15,7 +15,7 @@ class ParallelSolutionV2 : public ParallelSolutionBaseline{
 namespace KernelFunction
 {
     __global__ void
-    convolutionKernel_v2(const int32_t *input, u_int32_t inputWidth, u_int32_t inputHeight, const int32_t *filter,
+    convolutionKernel_v2(const int32_t *input, u_int32_t inputWidth, u_int32_t inputHeight, bool isXDirection,
                       u_int32_t filterSize, int32_t *output);
 
 }

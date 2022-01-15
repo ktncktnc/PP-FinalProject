@@ -5,9 +5,12 @@
 #include "timer.cuh"
 #include "parallel_solution_v2.cuh"
 
+__constant__ int32_t c_filterX[FILTER_SIZE * FILTER_SIZE];
+__constant__ int32_t c_filterY[FILTER_SIZE * FILTER_SIZE];
+
 namespace KernelFunction {
     __global__ void
-    convolutionKernel_v2(const int32_t *input, u_int32_t width, u_int32_t height, const int32_t *filter,
+    convolutionKernel_v2(const int32_t *input, u_int32_t width, u_int32_t height, bool isXDirection,
                          u_int32_t filterSize, int32_t *output) {
         extern __shared__ int32_t s_input[];
 
@@ -46,7 +49,14 @@ namespace KernelFunction {
                 uint32_t in_c = threadIdx.x + filterSize / 2 + k_c;
 
                 int32_t inPixel = s_input[convertIndex(in_r, in_c, s_width)];
-                int32_t filterVal = filter[convertIndex(k_r + filterSize / 2, k_c + filterSize / 2, filterSize)];
+
+                int32_t filterVal;
+                if (isXDirection){
+                    filterVal = c_filterX[convertIndex(k_r + filterSize / 2, k_c + filterSize / 2, filterSize)];
+                }
+                else{
+                    filterVal = c_filterY[convertIndex(k_r + filterSize / 2, k_c + filterSize / 2, filterSize)];
+                }
                 outPixel += inPixel * filterVal;
             }
         }
@@ -55,16 +65,16 @@ namespace KernelFunction {
 }
 
 IntImage ParallelSolutionV2::calculateEnergyMap(const IntImage &inputImage, dim3 blockSize) {
+    // Copy filter to constant mem
+    cudaMemcpyToSymbol(c_filterX, SOBEL_X, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t));
+    cudaMemcpyToSymbol(c_filterY, SOBEL_Y, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t));
+
     // Create Host Memory
     dim3 gridSize((inputImage.getWidth() - 1) / blockSize.x + 1, (inputImage.getHeight() - 1) / blockSize.y + 1);
     IntImage outputImage = IntImage(inputImage.getWidth(), inputImage.getHeight());
     size_t smemSize = (blockSize.x + FILTER_SIZE - 1) * (blockSize.y + FILTER_SIZE - 1) * sizeof(int32_t);
 
     // Create Device Memory
-    int32_t *d_filterX;
-    CHECK(cudaMalloc(&d_filterX, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
-    int32_t *d_filterY;
-    CHECK(cudaMalloc(&d_filterY, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
     int32_t *d_inputImage;
     CHECK(cudaMalloc(&d_inputImage, inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t)))
     int32_t *d_outputImageX;
@@ -75,17 +85,15 @@ IntImage ParallelSolutionV2::calculateEnergyMap(const IntImage &inputImage, dim3
     CHECK(cudaMalloc(&d_outputImage, outputImage.getWidth() * outputImage.getHeight() * sizeof(int32_t)))
 
     // Copy Memory from Host to Device
-    CHECK(cudaMemcpy(d_filterX, SOBEL_X, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t), cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(d_filterY, SOBEL_Y, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t), cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(d_inputImage, inputImage.getPixels(),
                      inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t), cudaMemcpyHostToDevice))
 
     // Run Device Methods
-    KernelFunction::convolutionKernel_v2<<<gridSize, blockSize, smemSize>>>(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), d_filterX, FILTER_SIZE, d_outputImageX);
+    KernelFunction::convolutionKernel_v2<<<gridSize, blockSize, smemSize>>>(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), true, FILTER_SIZE, d_outputImageX);
     cudaDeviceSynchronize();
     CHECK(cudaGetLastError())
 
-    KernelFunction::convolutionKernel_v2<<<gridSize, blockSize, smemSize>>>(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), d_filterY, FILTER_SIZE, d_outputImageY);
+    KernelFunction::convolutionKernel_v2<<<gridSize, blockSize, smemSize>>>(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), false, FILTER_SIZE, d_outputImageY);
     cudaDeviceSynchronize();
     CHECK(cudaGetLastError())
 
