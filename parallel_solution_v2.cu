@@ -4,9 +4,10 @@
 
 #include "timer.cuh"
 #include "parallel_solution_v2.cuh"
+#define TOTAL_FILTER_SIZE 9
 
-__constant__ int32_t c_filterX[ParallelSolutionV2.FILTER_SIZE * ParallelSolutionV2.FILTER_SIZE];
-__constant__ int32_t c_filterY[ParallelSolutionV2.FILTER_SIZE * ParallelSolutionV2.FILTER_SIZE];
+__constant__ int32_t c_filterX[TOTAL_FILTER_SIZE];
+__constant__ int32_t c_filterY[TOTAL_FILTER_SIZE];
 
 namespace KernelFunction {
     __global__ void
