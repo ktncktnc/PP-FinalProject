@@ -63,7 +63,7 @@ namespace SequentialFunction {
     }
 
     // Find seam curve from cumulative map
-    void findSeamCurve(int *input, uint32_t inputWidth, uint32_t inputHeight, int *output) {
+    void findSeamCurve(int *input, uint32_t inputWidth, uint32_t inputHeight, uint32_t *output) {
         int a, b, c, min_idx, offset, best;
         min_idx = findMinIndex(input + (inputHeight - 1) * inputWidth, inputWidth);
         output[inputHeight - 1] = min_idx;

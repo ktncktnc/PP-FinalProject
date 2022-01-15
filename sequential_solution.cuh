@@ -11,7 +11,7 @@ namespace SequentialFunction {
 
     void createCumulativeEnergyMap(int *input, uint32_t inputWidth, uint32_t inputHeight, int *output);
 
-    void findSeamCurve(int *input, uint32_t inputWidth, uint32_t inputHeight, int *output);
+    void findSeamCurve(int *input, uint32_t inputWidth, uint32_t inputHeight, uint32_t *output);
 
     int findMinIndex(int *arr, uint32_t size);
 
