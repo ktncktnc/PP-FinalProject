@@ -71,7 +71,7 @@ long long PnmImage::sum(){
             res += pixel.x + pixel.y + pixel.z;
         }
 
-    return sum;
+    return res;
 }
 
 float PnmImage::computeError(uchar3 *a1, uchar3 *a2, uint32_t n) {
@@ -117,5 +117,5 @@ long long IntImage::sum(){
                 res += pixels[i * this->width + j];
             }
 
-    return sum;
+    return res;
 }
