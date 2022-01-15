@@ -142,11 +142,11 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
 
     for (int i = 0; i < nDeletingSeams; ++i) {
         // 1. Convert to GrayScale
-        IntImage grayImage = convertToGrayScale(outputImage, blockSize);
+        IntImage grayImage = convertToGrayScale(outputImage);
         // 2. Calculate the Energy Map
-        IntImage energyMap = calculateEnergyMap(grayImage, blockSize);
+        IntImage energyMap = calculateEnergyMap(grayImage);
         // 3. Dynamic Programming
-        IntImage seamMap = calculateSeamMap(energyMap, blockSize.x * blockSize.y);
+        IntImage seamMap = calculateSeamMap(energyMap);
         // 4. Extract the seam
         auto *seam = (uint32_t *) malloc(energyMap.getHeight() * sizeof(uint32_t));
         extractSeam(seamMap, seam);
@@ -159,7 +159,7 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
     printf("Time: %.3f ms\n", timer.Elapsed());
     printf("-------------------------------\n");
 
-    return PnmImage(cur_width, height, input);
+    return outputImage;
 }
 
 IntImage SequentialSolution:convertToGrayScale(const PnmImage &inputImage){
