@@ -63,7 +63,7 @@ void PnmImage::compare(const PnmImage &other) {
     printf("Error: %f\n", err);
 }
 
-long long PnmImage::sum();{
+long long PnmImage::sum(){
     long long res = 0;
     for(int i = 0; i < this->height; i++)
         for(int j = 0; j < this->width; j++){
@@ -110,7 +110,7 @@ int32_t *IntImage::getPixels() const {
     return pixels;
 }
 
-long long PnmImage::sum();{
+long long IntImage::sum(){
     long long res = 0;
         for(int i = 0; i < this->height; i++)
             for(int j = 0; j < this->width; j++){
