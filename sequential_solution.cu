@@ -54,7 +54,7 @@ namespace SequentialFunction {
     void createCumulativeEnergyMap(int32_t *input, uint32_t inputWidth, uint32_t inputHeight, int32_t *output) {
         int a, b, c;
         // Copy last line
-        copyARow(input, inputWidth, inputHeight, 0, output);
+        copyARow(input, inputWidth, 0, output);
 
         for (int row = 1; row < inputHeight; row++) {
             for (int col = 0; col < inputWidth; col++) {
@@ -94,7 +94,7 @@ namespace SequentialFunction {
     // Remove seam curve from image
     void reduce(uchar3 *input, uint32_t width, uint32_t height, uint32_t *path, uchar3 *output) {
         for (int i = 0; i < height; i++) {
-            copyARow(input, width, height, i, path[i], output);
+            copyARowAndRemove(input, width, uint32_t(i), path[i], output);
         }
     }
 
