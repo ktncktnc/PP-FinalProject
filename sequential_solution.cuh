@@ -3,30 +3,30 @@
 #include "solution.cuh"
 
 namespace SequentialFunction {
-    void convolution(int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int *output);
+    void convolution(int32_t *input, uint32_t inputWidth, uint32_t inputHeight, const int32_t *filter, uint32_t filterSize, int32_t *output);
 
-    void convertToGray(uchar3 *input, int width, int height, int *output);
+    void convertToGray(uchar3 *input, uint32_t width, uint32_t height, int32_t *output);
 
-    void addAbs(int *input_1, int *input_2, int inputWidth, int inputHeight, int *output);
+    void addAbs(int32_t *input_1, int32_t *input_2, uint32_t inputWidth, uint32_t inputHeight, int32_t *output);
 
-    void createCumulativeEnergyMap(int *input, int inputWidth, int inputHeight, int *output);
+    void createCumulativeEnergyMap(int32_t *input, uint32_t inputWidth, uint32_t inputHeight, int32_t *output);
 
-    void findSeamCurve(int *input, int inputWidth, uint32_t int, uint32_t *output);
+    void findSeamCurve(int32_t *input, uint32_t inputWidth, uint32_t inputHeight, uint32_t *output);
 
-    int findMinIndex(int *arr, int size);
+    int findMinIndex(int32_t *arr, uint32_t size);
 
-    void copyARow(int *input, uint32_t width, int height, int rowIdx, int removedIdx, int *output);
+    void copyARow(int32_t *input, uint32_t width, int rowIdx, int32_t *output);
 
-    void copyARow(uchar3 *input, int width, int height, int rowIdx, int removedIdx, uchar3 *output);
+    void copyARowAndRemove(uchar3 *input, uint32_t width, int rowIdx, int removedIdx, uchar3 *output);
 
-    void reduce(uchar3 *input, int width, int height, uint32_t *path, uchar3 *output);
+    void reduce(uchar3 *input, uint32_t width, uint32_t height, uint32_t *path, uchar3 *output);
 }
 
 class SequentialSolution : public BaseSolution {
 private:
-    static const int FILTER_SIZE = 3;
-    static const int SOBEL_X[9];
-    static const int SOBEL_Y[9];
+    static const uint32_t FILTER_SIZE = 3;
+    static const int32_t SOBEL_X[9];
+    static const int32_t SOBEL_Y[9];
 
 protected:
     static IntImage calculateSeamMap(const IntImage &inputImage);
