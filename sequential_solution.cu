@@ -12,13 +12,13 @@ namespace SequentialFunction {
         int32_t sum;
 
         //For each pixel in image
-        for (int x = 0; x < inputHeight; x++) {
-            for (int y = 0; y < inputWidth; y++) {
+        for (int x = 0; x < int(inputHeight); x++) {
+            for (int y = 0; y < int(inputWidth); y++) {
                 sum = 0;
                 index = x * inputWidth + y;
                 //For each value in kernel
-                for (int i = -(filterSize / 2); i <= filterSize / 2; i++) {
-                    for (int j = -(filterSize / 2); j <= filterSize / 2; j++) {
+                for (int i = -int(filterSize / 2); i <= int(filterSize / 2); i++) {
+                    for (int j = -int(filterSize / 2); j <= int(filterSize / 2); j++) {
                         k_x = min(max(x + i, 0), int32_t(inputHeight) - 1);
                         k_y = min(max(y + j, 0), int32_t(inputWidth) - 1);
                         k_index = k_x * inputWidth + k_y;
@@ -175,7 +175,7 @@ IntImage SequentialSolution::convertToGrayScale(const PnmImage &inputImage){
     return outputImage;
 }
 
-IntImage SequentialSolution::calculateSeamMap(const IntImage &inputImage){
+IntImage SequentialSolution::calculateEnergyMap(const IntImage &inputImage){
     uint32_t width = inputImage.getWidth(), height = inputImage.getHeight();
 
     IntImage gradX = IntImage(inputImage.getWidth(), inputImage.getHeight());
@@ -191,7 +191,7 @@ IntImage SequentialSolution::calculateSeamMap(const IntImage &inputImage){
     return grad;
 }
 
-IntImage SequentialSolution::calculateEnergyMap(const IntImage &inputImage){
+IntImage SequentialSolution::calculateSeamMap(const IntImage &inputImage){
     IntImage map = IntImage(inputImage.getWidth(), inputImage.getHeight());
     SequentialFunction::createCumulativeEnergyMap(inputImage.getPixels(), inputImage.getWidth(), inputImage.getHeight(), map.getPixels());
 
