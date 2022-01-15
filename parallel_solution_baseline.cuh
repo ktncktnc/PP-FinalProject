@@ -28,8 +28,9 @@ namespace KernelFunction {
 }
 
 class ParallelSolutionBaseline : public BaseSolution {
-protected:
+public:
     static const u_int32_t FILTER_SIZE = 3;
+protected:
     static const int32_t SOBEL_X[3][3];
     static const int32_t SOBEL_Y[3][3];
 

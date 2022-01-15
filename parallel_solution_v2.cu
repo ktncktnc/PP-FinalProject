@@ -5,8 +5,8 @@
 #include "timer.cuh"
 #include "parallel_solution_v2.cuh"
 
-__constant__ int32_t c_filterX[FILTER_SIZE * FILTER_SIZE];
-__constant__ int32_t c_filterY[FILTER_SIZE * FILTER_SIZE];
+__constant__ int32_t c_filterX[ParallelSolutionV2.FILTER_SIZE * ParallelSolutionV2.FILTER_SIZE];
+__constant__ int32_t c_filterY[ParallelSolutionV2.FILTER_SIZE * ParallelSolutionV2.FILTER_SIZE];
 
 namespace KernelFunction {
     __global__ void
@@ -107,8 +107,6 @@ IntImage ParallelSolutionV2::calculateEnergyMap(const IntImage &inputImage, dim3
                      outputImage.getWidth() * outputImage.getHeight() * sizeof(int32_t), cudaMemcpyDeviceToHost))
 
     // Free Device Memory
-    CHECK(cudaFree(d_filterX))
-    CHECK(cudaFree(d_filterY))
     CHECK(cudaFree(d_inputImage))
     CHECK(cudaFree(d_outputImageX))
     CHECK(cudaFree(d_outputImageY))
