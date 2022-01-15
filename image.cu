@@ -63,6 +63,17 @@ void PnmImage::compare(const PnmImage &other) {
     printf("Error: %f\n", err);
 }
 
+long long PnmImage::sum();{
+    long long res = 0;
+    for(int i = 0; i < this->height; i++)
+        for(int j = 0; j < this->width; j++){
+            uchar3 pixel = pixels[i * this->width + j];
+            res += pixel.x + pixel.y + pixel.z;
+        }
+
+    return sum;
+}
+
 float PnmImage::computeError(uchar3 *a1, uchar3 *a2, uint32_t n) {
     long long err = 0;
     for (int i = 0; i < n; i++) {
@@ -97,4 +108,14 @@ uint32_t IntImage::getHeight() const {
 
 int32_t *IntImage::getPixels() const {
     return pixels;
+}
+
+long long PnmImage::sum();{
+    long long res = 0;
+        for(int i = 0; i < this->height; i++)
+            for(int j = 0; j < this->width; j++){
+                res += pixels[i * this->width + j];
+            }
+
+    return sum;
 }

@@ -65,6 +65,8 @@ public:
 
     void compare(const PnmImage &other);
 
+    long long sum();
+
     uint32_t getWidth() const;
 
 
@@ -87,7 +89,7 @@ public:
 
     int32_t *getPixels() const;
 
-    IntImage() {
+        IntImage() {
         width = 0;
         height = 0;
         pixels = nullptr;
@@ -138,6 +140,7 @@ public:
         return outputImage;
     }
 
+    long long sum();
 
     ~IntImage() {
         if (pixels)
