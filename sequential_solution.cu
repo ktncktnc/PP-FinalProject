@@ -22,7 +22,7 @@ namespace SequentialFunction {
                         k_x = min(max(x + i, 0), int32_t(inputHeight) - 1);
                         k_y = min(max(y + j, 0), int32_t(inputWidth) - 1);
                         k_index = k_x * inputWidth + k_y;
-                        sum += input[k_index] * filter[(i + filterSize / 2) * filterSize + j + filterSize / 2];
+                        sum += input[k_index] * filter[(i + int(filterSize / 2)) * int(filterSize) + j + int(filterSize / 2)];
                     }
                 }
                 output[index] = sum;
@@ -33,7 +33,7 @@ namespace SequentialFunction {
     // Convert RGB to gray
     void convertToGray(uchar3 *input, uint32_t width, uint32_t height, int32_t *output) {
         for (int i = 0; i < width * height; i++) {
-            output[i] = int32_t(0.299 * input[i].x + 0.587 * input[i].y + 0.114 * input[i].z);
+            output[i] = int32_t(299 * input[i].x + 587 * input[i].y + 114 * input[i].z) / 1000;
         }
     }
 

@@ -13,7 +13,7 @@ namespace KernelFunction {
         if (r < inputHeight && c < inputWidth) {
             u_int32_t i = r * inputWidth + c;
             uchar3 pixel = input[i];
-            output[i] = (int32_t) (0.299 * pixel.x + 0.587 * pixel.y + 0.114 * pixel.z);
+            output[i] = int32_t(299 * pixel.x + 587 * pixel.y + 114 * pixel.z) / 1000;
         }
     }
 
