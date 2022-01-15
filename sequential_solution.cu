@@ -132,23 +132,27 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
         return PnmImage(inputImage.getWidth(), inputImage.getHeight());
     }
     int nDeletingSeams = stoi(argv[0], nullptr);
-    uchar3 *input = inputImage.getPixels();
-    uchar3 *output;
-
-    int cur_width = inputImage.getWidth();
-    int height = inputImage.getHeight();
 
     printf("Running Baseline Sequential Solution\n");
 
     GpuTimer timer;
     timer.Start();
 
-    for (int i = 0; i < nDeletingSeams; i++) {
-        output = SequentialSolution::scan(input, cur_width, height, i);
-        cur_width--;
-        if (i > 0)
-            free(input);
-        input = output;
+    PnmImage outputImage = inputImage;
+
+    for (int i = 0; i < nDeletingSeams; ++i) {
+        // 1. Convert to GrayScale
+        IntImage grayImage = convertToGrayScale(outputImage, blockSize);
+        // 2. Calculate the Energy Map
+        IntImage energyMap = calculateEnergyMap(grayImage, blockSize);
+        // 3. Dynamic Programming
+        IntImage seamMap = calculateSeamMap(energyMap, blockSize.x * blockSize.y);
+        // 4. Extract the seam
+        auto *seam = (uint32_t *) malloc(energyMap.getHeight() * sizeof(uint32_t));
+        extractSeam(seamMap, seam);
+        // 5. Delete the seam
+        outputImage = deleteSeam(outputImage, seam);
+        free(seam);
     }
 
     timer.Stop();
@@ -158,45 +162,86 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
     return PnmImage(cur_width, height, input);
 }
 
-uchar3* SequentialSolution::scan(uchar3 *input, int width, int height, int counter) {
-    int output_width = width - 1;
-    int output_height = height;
+IntImage SequentialSolution:convertToGrayScale(const PnmImage &inputImage){
+    IntImage outputImage = IntImage(inputImage.getWidth(), inputImage.getHeight());
+    SequentialFunction::convertToGray(input, inputImage.getWidth(), inputImage.getHeight(), outputImage.getPixels());
 
-    uchar3 *output = (uchar3 *) malloc(output_width * output_height * sizeof(uchar3));
+    return outputImage;
+}
 
-    // Convert to gray image
-    int *grayImg = (int *) malloc(width * height * sizeof(int));
-    SequentialFunction::convertToGray(input, width, height, grayImg);
+IntImage SequentialSolution:calculateSeamMap(const IntImage &inputImage){
+    uint32_t width = inputImage.getWidth(), height = inputImage.getHeight();
 
-    // Convolution
-    int *gradX, *gradY, *grad;
-    gradX = (int *) malloc(width * height * sizeof(int));
-    gradY = (int *) malloc(width * height * sizeof(int));
-    grad = (int *) malloc(width * height * sizeof(int));
+    IntImage gradX = IntImage(inputImage.getWidth(), inputImage.getHeight());
+    IntImage gradY = IntImage(inputImage.getWidth(), inputImage.getHeight());
+    IntImage grad = IntImage(inputImage.getWidth(), inputImage.getHeight());
 
-    SequentialFunction::convolution(grayImg, width, height, SOBEL_X, FILTER_SIZE, gradX);
-    SequentialFunction::convolution(grayImg, width, height, SOBEL_Y, FILTER_SIZE, gradY);
+    SequentialFunction::convolution(inputImage.getPixels(), width, height, SOBEL_X, FILTER_SIZE, gradX.getPixels());
+    SequentialFunction::convolution(inputImage.getPixels(), width, height, SOBEL_Y, FILTER_SIZE, gradY.getPixels());
 
     // Cal energy
-    SequentialFunction::addAbs(gradX, gradY, width, height, grad);
+    SequentialFunction::addAbs(gradX.getPixels(), gradY.getPixels(), width, height, grad.getPixels());
 
-    // Cal cumulative map
-    int *map = (int *) malloc(width * height * sizeof(int));
-    SequentialFunction::createCumulativeEnergyMap(grad, width, height, map);
-
-    // Cal path
-    int *path = (int *) malloc(height * sizeof(int));
-    SequentialFunction::findSeamCurve(map, width, height, path);
-
-    // Remove seam curve
-    SequentialFunction::reduce(input, width, height, path, output);
-
-    free(grayImg);
-    free(gradX);
-    free(gradY);
-    free(grad);
-    free(map);
-    free(path);
-
-    return output;
+    return grad;
 }
+
+IntImage SequentialSolution:calculateEnergyMap(const IntImage &inputImage){
+    IntImage map = IntImage(inputImage.getWidth(), inputImage.getHeight());
+    SequentialFunction::createCumulativeEnergyMap(inputImage.getPixels(), inputImage.getWidth(), inputImage.getHeight(), map.getPixels());
+
+    return map;
+};
+
+void SequentialSolution:extractSeam(const IntImage &energyMap, uint32_t *seam){
+    SequentialFunction::findSeamCurve(energyMap.getPixels(), energyMap.getWidth(), energyMap.getHeight(), seam);
+};
+
+PnmImage SequentialSolution:deleteSeam(const PnmImage &inputImage, uint32_t *seam){
+    PnmImage outputImage = PnmImage(inputImage.getWidth() - 1, inputImage.getHeight());
+
+    SequentialFunction::reduce(inputImage.getPixels(), inputImage.getWidth(), inputImage.getHeight(), seam, outputImage.getPixels());
+    return outputImage;
+};
+
+//uchar3* SequentialSolution::scan(uchar3 *input, int width, int height, int counter) {
+//    int output_width = width - 1;
+//    int output_height = height;
+//
+//    uchar3 *output = (uchar3 *) malloc(output_width * output_height * sizeof(uchar3));
+//
+//    // Convert to gray image
+//    int *grayImg = (int *) malloc(width * height * sizeof(int));
+//
+//
+//    // Convolution
+//    int *gradX, *gradY, *grad;
+//    gradX = (int *) malloc(width * height * sizeof(int));
+//    gradY = (int *) malloc(width * height * sizeof(int));
+//    grad = (int *) malloc(width * height * sizeof(int));
+//
+//    SequentialFunction::convolution(grayImg, width, height, SOBEL_X, FILTER_SIZE, gradX);
+//    SequentialFunction::convolution(grayImg, width, height, SOBEL_Y, FILTER_SIZE, gradY);
+//
+//    // Cal energy
+//    SequentialFunction::addAbs(gradX, gradY, width, height, grad);
+//
+//    // Cal cumulative map
+//    int *map = (int *) malloc(width * height * sizeof(int));
+//    SequentialFunction::createCumulativeEnergyMap(grad, width, height, map);
+//
+//    // Cal path
+//    int *path = (int *) malloc(height * sizeof(int));
+//    SequentialFunction::findSeamCurve(map, width, height, path);
+//
+//    // Remove seam curve
+//    SequentialFunction::reduce(input, width, height, path, output);
+//
+//    free(grayImg);
+//    free(gradX);
+//    free(gradY);
+//    free(grad);
+//    free(map);
+//    free(path);
+//
+//    return output;
+//}

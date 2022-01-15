@@ -28,8 +28,18 @@ private:
     static const int SOBEL_X[9];
     static const int SOBEL_Y[9];
 
+protected:
+    static IntImage calculateSeamMap(const IntImage &inputImage);
+
+    static IntImage convertToGrayScale(const PnmImage &inputImage);
+
+    static IntImage calculateEnergyMap(const IntImage &inputImage);
+
+    static PnmImage deleteSeam(const PnmImage &inputImage, uint32_t *seam);
+
+    static void extractSeam(const IntImage &energyMap, uint32_t *seam);
+
 public:
     PnmImage run(const PnmImage &inputImage, int argc, char **argv) override;
 
-    uchar3 *scan(uchar3 *input, int width, int height, int counter);
 };
