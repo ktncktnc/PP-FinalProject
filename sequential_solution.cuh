@@ -3,23 +3,23 @@
 #include "solution.cuh"
 
 namespace SequentialFunction {
-    void convolution(int *input, uint32_t inputWidth, uint32_t inputHeight, const int *filter, uint32_t filterSize, int *output);
+    void convolution(int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int *output);
 
-    void convertToGray(uchar3 *input, uint32_t width, uint32_t height, int *output);
+    void convertToGray(uchar3 *input, int width, int height, int *output);
 
-    void addAbs(int *input_1, int *input_2, uint32_t inputWidth, uint32_t inputHeight, int *output);
+    void addAbs(int *input_1, int *input_2, int inputWidth, int inputHeight, int *output);
 
-    void createCumulativeEnergyMap(int *input, uint32_t inputWidth, uint32_t inputHeight, int *output);
+    void createCumulativeEnergyMap(int *input, int inputWidth, int inputHeight, int *output);
 
-    void findSeamCurve(int *input, uint32_t inputWidth, uint32_t inputHeight, uint32_t *output);
+    void findSeamCurve(int *input, int inputWidth, uint32_t int, uint32_t *output);
 
-    int findMinIndex(int *arr, uint32_t size);
+    int findMinIndex(int *arr, int size);
 
-    void copyARow(int *input, uint32_t width, uint32_t height, uint32_t rowIdx, int32_t removedIdx, int *output);
+    void copyARow(int *input, uint32_t width, int height, int rowIdx, int removedIdx, int *output);
 
-    void copyARow(uchar3 *input, uint32_t width, uint32_t height, uint32_t rowIdx, int32_t removedIdx, uchar3 *output);
+    void copyARow(uchar3 *input, int width, int height, int rowIdx, int removedIdx, uchar3 *output);
 
-    void reduce(uchar3 *input, uint32_t width, uint32_t height, uint32_t *path, uchar3 *output);
+    void reduce(uchar3 *input, int width, int height, uint32_t *path, uchar3 *output);
 }
 
 class SequentialSolution : public BaseSolution {

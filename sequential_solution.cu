@@ -7,7 +7,7 @@ using namespace std;
 
 namespace SequentialFunction {
     // Convolution func
-    void convolution(int *input, uint32_t inputWidth, uint32_t inputHeight, const int *filter, uint32_t filterSize, int *output) {
+    void convolution(int *input, int inputWidth, int inputHeight, const int *filter, int filterSize, int *output) {
         int index, k_index, k_x, k_y, sum;
         //For each pixel in image
         for (int x = 0; x < inputHeight; x++) {
@@ -29,14 +29,14 @@ namespace SequentialFunction {
     }
 
     // Convert RGB to gray
-    void convertToGray(uchar3 *input, uint32_t width, uint32_t height, int *output) {
+    void convertToGray(uchar3 *input, int width, int height, int *output) {
         for (int i = 0; i < width * height; i++) {
             output[i] = int(0.299 * input[i].x + 0.587 * input[i].y + 0.114 * input[i].z);
         }
     }
 
     // Create energy arr from X and Y
-    void addAbs(int *input_1, int *input_2, uint32_t inputWidth, uint32_t inputHeight, int *output) {
+    void addAbs(int *input_1, int *input_2, int inputWidth, int inputHeight, int *output) {
         int index, value;
         for (int x = 0; x < inputHeight; x++) {
             for (int y = 0; y < inputWidth; y++) {
@@ -48,7 +48,7 @@ namespace SequentialFunction {
     }
 
     // Create cumulative map
-    void createCumulativeEnergyMap(int *input, uint32_t inputWidth, uint32_t inputHeight, int *output) {
+    void createCumulativeEnergyMap(int *input, int inputWidth, int inputHeight, int *output) {
         int a, b, c;
         // Copy last line
         copyARow(input, inputWidth, inputHeight, 0, -1, output);
@@ -63,7 +63,7 @@ namespace SequentialFunction {
     }
 
     // Find seam curve from cumulative map
-    void findSeamCurve(int *input, uint32_t inputWidth, uint32_t inputHeight, uint32_t *output) {
+    void findSeamCurve(int *input, int inputWidth, int inputHeight, uint32_t *output) {
         int a, b, c, min_idx, offset, best;
         min_idx = findMinIndex(input + (inputHeight - 1) * inputWidth, inputWidth);
         output[inputHeight - 1] = min_idx;
@@ -87,14 +87,14 @@ namespace SequentialFunction {
     }
 
     // Remove seam curve from image
-    void reduce(uchar3 *input, uint32_t width, uint32_t height, uint32_t *path, uchar3 *output) {
+    void reduce(uchar3 *input, int width, int height, uint32_t *path, uchar3 *output) {
         for (int i = 0; i < height; i++) {
             copyARow(input, width, height, i, path[i], output);
         }
     }
 
     // Util funcs--------------------
-    int findMinIndex(int *arr, uint32_t size) {
+    int findMinIndex(int *arr, int size) {
         int min_idx = 0;
         for (int i = 1; i < size; i++) {
             if (arr[min_idx] > arr[i])
@@ -103,7 +103,7 @@ namespace SequentialFunction {
         return min_idx;
     }
 
-    void copyARow(int *input, uint32_t width, uint32_t height, uint32_t rowIdx, int32_t removedIdx, int *output) {
+    void copyARow(int *input, int width, int height, int rowIdx, int removedIdx, int *output) {
         int output_idx = rowIdx * width, input_idx;
         for (int i = 0; i < width; i++) {
             input_idx = rowIdx * width + i;
@@ -112,7 +112,7 @@ namespace SequentialFunction {
         }
     }
 
-    void copyARow(uchar3 *input, uint32_t width, uint32_t height, uint32_t rowIdx, int32_t removedIdx, uchar3 *output) {
+    void copyARow(uchar3 *input, int width, int height, int rowIdx, int removedIdx, uchar3 *output) {
         int output_idx = rowIdx * (width - 1), input_idx;
         for (int i = 0; i < width; i++) {
             if (i == removedIdx) continue;
