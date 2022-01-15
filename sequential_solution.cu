@@ -103,7 +103,7 @@ namespace SequentialFunction {
         return min_idx;
     }
 
-    void copyARow(int *input, uint32_t width, uint32_t height, uint32_t rowIdx, uint32_t removedIdx, int *output) {
+    void copyARow(int *input, uint32_t width, uint32_t height, uint32_t rowIdx, int32_t removedIdx, int *output) {
         int output_idx = rowIdx * width, input_idx;
         for (int i = 0; i < width; i++) {
             input_idx = rowIdx * width + i;
@@ -112,7 +112,7 @@ namespace SequentialFunction {
         }
     }
 
-    void copyARow(uchar3 *input, uint32_t width, uint32_t height, uint32_t rowIdx, uint32_t removedIdx, uchar3 *output) {
+    void copyARow(uchar3 *input, uint32_t width, uint32_t height, uint32_t rowIdx, int32_t removedIdx, uchar3 *output) {
         int output_idx = rowIdx * (width - 1), input_idx;
         for (int i = 0; i < width; i++) {
             if (i == removedIdx) continue;

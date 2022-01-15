@@ -15,9 +15,9 @@ namespace SequentialFunction {
 
     int findMinIndex(int *arr, uint32_t size);
 
-    void copyARow(int *input, uint32_t width, uint32_t height, uint32_t rowIdx, uint32_t removedIdx, int *output);
+    void copyARow(int *input, uint32_t width, uint32_t height, uint32_t rowIdx, int32_t removedIdx, int *output);
 
-    void copyARow(uchar3 *input, uint32_t width, uint32_t height, uint32_t rowIdx, uint32_t removedIdx, uchar3 *output);
+    void copyARow(uchar3 *input, uint32_t width, uint32_t height, uint32_t rowIdx, int32_t removedIdx, uchar3 *output);
 
     void reduce(uchar3 *input, uint32_t width, uint32_t height, uint32_t *path, uchar3 *output);
 }
