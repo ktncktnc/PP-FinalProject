@@ -94,7 +94,7 @@ namespace SequentialFunction {
     // Remove seam curve from image
     void reduce(uchar3 *input, uint32_t width, uint32_t height, uint32_t *path, uchar3 *output) {
         for (int i = 0; i < height; i++) {
-            copyARowAndRemove(input, width, uint32_t(i), path[i], output);
+            copyARowAndRemove(input, width, i, int(path[i]), output);
         }
     }
 
@@ -108,7 +108,7 @@ namespace SequentialFunction {
         return min_idx;
     }
 
-    void copyARow(int32_t *input, uint32_t width, int rowIdx, int32_t *output) {
+    void copyARow(int32_t *input, uint32_t width, int32_t rowIdx, int32_t *output) {
         int output_idx = rowIdx * width, input_idx;
 
         for (int i = 0; i < width; i++) {
@@ -118,7 +118,7 @@ namespace SequentialFunction {
         }
     }
 
-    void copyARowAndRemove(uchar3 *input, uint32_t width, int rowIdx, int removedIdx, uchar3 *output) {
+    void copyARowAndRemove(uchar3 *input, uint32_t width, int32_t rowIdx, int32_t removedIdx, uchar3 *output) {
         int output_idx = rowIdx * (width - 1), input_idx;
         for (int i = 0; i < width; i++) {
             if (i == removedIdx) continue;
