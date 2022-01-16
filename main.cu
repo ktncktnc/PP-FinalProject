@@ -12,9 +12,27 @@
 #include "parallel_solution_v234.cuh"
 #include <vector>
 
+void printUserGuide(int list){
+    if (list == 0)
+        printf("Seam Carving Program Guide: FinalProject <input image path> <output image path> <solutionID>\n");
+    else{
+        printf("Solution ID: number from 0 to 8\n"
+               "0: all\n"
+               "1: baseline solution\n"
+               "2: solution 1\n"
+               "3: solution 2\n"
+               "4: solution 3\n"
+               "5: solution 2 and 3\n"
+               "6: solution 2 and 4\n"
+               "7: solution 3 and 4\n"
+               "8: solution 2, 3 and 4\n");
+    }
+}
+
 bool extractFilesArgument(int argc, char **argv, char *&inputFileName, char *&outputFileName, int &solutionID) {
     if (argc < 4) {
         printf("The number of arguments is invalid\n");
+        printUserGuide(0);
         return false;
     }
     inputFileName = argv[1];
@@ -38,6 +56,7 @@ int main(int argc, char **argv) {
 
     if (solutionID < 0 || solutionID > N_PARALLEL_SOLUTIONS) {
         printf("The solution ID is invalid\n");
+        printUserGuide(1);
         return EXIT_FAILURE;
     }
 
