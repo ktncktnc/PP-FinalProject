@@ -2,8 +2,7 @@
 #include "timer.cuh"
 
 namespace KernelFunction {
-    __device__ u_int32_t blockCount = 0;
-
+    __device__ u_int32_t blockCount;
     __global__ void
     updateSeamMapKernelPipelining(int32_t *input, u_int32_t inputWidth,
                                   bool volatile *isBlockFinished) {
@@ -166,7 +165,6 @@ PnmImage ParallelSolutionV4::run(const PnmImage &inputImage, int argc, char **ar
 void ParallelSolutionV4::calculateSeamMap(int32_t *d_inputImage, uint32_t inputWidth, uint32_t inputHeight,
                                           uint32_t blockSize) {
     uint32_t gridSize = ((inputWidth - 1) / blockSize + 1) * (inputHeight - 1);
-    IntImage outputImage = IntImage(inputWidth, inputHeight);
     uint32_t zero = 0;
 
     // Create Device Memory

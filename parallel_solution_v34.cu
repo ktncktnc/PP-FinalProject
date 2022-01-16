@@ -1,23 +1,141 @@
-#include "parallel_solution_v3.cuh"
+#include "parallel_solution_v34.cuh"
 #include "timer.cuh"
 
 namespace KernelFunction {
+    __device__ u_int32_t blockCountBackward;
+    __device__ u_int32_t blockCountForward;
+
     __global__ void
-    updateSeamMapKernelBackward(int32_t *input, u_int32_t inputWidth,
-                                int32_t currentRow) {
-        u_int32_t c = blockIdx.x * blockDim.x + threadIdx.x;
-        if (c < inputWidth) {
-            int32_t minVal = input[convertIndex(currentRow + 1, c, inputWidth)];
+    updateSeamMapKernelPipeliningForward(int32_t *input, u_int32_t inputWidth,
+                                         bool volatile *isBlockFinished) {
+        // 1.  Get block Index
+        __shared__ u_int32_t newBlockIdx;
+        if (threadIdx.x == 0) {
+            newBlockIdx = atomicAdd(&blockCountForward, 1);
+        }
+        __syncthreads();
+
+        u_int32_t numBlocksPerRow = ((inputWidth - 1) / blockDim.x + 1);
+        u_int32_t currentRow = (newBlockIdx / numBlocksPerRow) + 1;
+        u_int32_t currentRowBlock = newBlockIdx % numBlocksPerRow;
+        u_int32_t c = currentRowBlock * blockDim.x + threadIdx.x;
+        int32_t minVal = 0;
+
+        // 2. Waiting for before block newBlockIdx - numBlocksPerRow
+        if (threadIdx.x == 0) {
+            if (newBlockIdx >= numBlocksPerRow) {
+                while (!isBlockFinished[newBlockIdx - numBlocksPerRow]);
+            }
+            __threadfence();
+        }
+        __syncthreads();
+
+        if (c < inputWidth && threadIdx.x != blockDim.x - 1 && threadIdx.x != 0) {
+            minVal = input[convertIndex(currentRow - 1, c, inputWidth)];
+            if (c > 0)
+                minVal = min(minVal, input[convertIndex(currentRow - 1, c - 1, inputWidth)]);
+            if (c + 1 < inputWidth)
+                minVal = min(minVal, input[convertIndex(currentRow - 1, c + 1, inputWidth)]);
+        }
+
+        // 3. Waiting for before block newBlockIdx + 1 and newBlockIdx - 1
+        if (threadIdx.x == 0 || threadIdx.x == blockDim.x - 1) {
+            if (newBlockIdx > numBlocksPerRow) {
+                if (newBlockIdx % numBlocksPerRow != 0) {
+                    while (!isBlockFinished[newBlockIdx - numBlocksPerRow - 1]);
+                }
+                if (newBlockIdx % numBlocksPerRow != numBlocksPerRow - 1) {
+                    while (!isBlockFinished[newBlockIdx - numBlocksPerRow + 1]);
+                }
+                __threadfence();
+            }
+            if (c < inputWidth) {
+                minVal = input[convertIndex(currentRow - 1, c, inputWidth)];
+                if (c > 0)
+                    minVal = min(minVal, input[convertIndex(currentRow - 1, c - 1, inputWidth)]);
+                if (c + 1 < inputWidth)
+                    minVal = min(minVal, input[convertIndex(currentRow - 1, c + 1, inputWidth)]);
+            }
+        }
+
+        if (c < inputWidth)
+            input[convertIndex(currentRow, c, inputWidth)] += minVal;
+
+        __syncthreads();
+
+        // 4. Mark Threads as Done
+        __threadfence();
+        if (threadIdx.x == 0) {
+            isBlockFinished[newBlockIdx] = true;
+        }
+    }
+
+    __global__ void updateSeamMapKernelPipeliningBackward(int32_t *input, u_int32_t inputWidth, u_int32_t inputHeight,
+                                                          volatile bool *isBlockFinished) {
+        // 1.  Get block Index
+        __shared__ u_int32_t newBlockIdx;
+        if (threadIdx.x == 0) {
+            newBlockIdx = atomicAdd(&blockCountBackward, 1);
+        }
+        __syncthreads();
+
+        u_int32_t numBlocksPerRow = ((inputWidth - 1) / blockDim.x + 1);
+        u_int32_t currentRow = inputHeight - (newBlockIdx / numBlocksPerRow) - 2;
+        u_int32_t currentRowBlock = newBlockIdx % numBlocksPerRow;
+        u_int32_t c = currentRowBlock * blockDim.x + threadIdx.x;
+        int32_t minVal = 0;
+
+        // 2. Waiting for before block newBlockIdx - numBlocksPerRow
+        if (threadIdx.x == 0) {
+            if (newBlockIdx >= numBlocksPerRow) {
+                while (!isBlockFinished[newBlockIdx - numBlocksPerRow]);
+            }
+            __threadfence();
+        }
+        __syncthreads();
+
+        if (c < inputWidth && threadIdx.x != blockDim.x - 1 && threadIdx.x != 0) {
+            minVal = input[convertIndex(currentRow + 1, c, inputWidth)];
             if (c > 0)
                 minVal = min(minVal, input[convertIndex(currentRow + 1, c - 1, inputWidth)]);
             if (c + 1 < inputWidth)
                 minVal = min(minVal, input[convertIndex(currentRow + 1, c + 1, inputWidth)]);
+        }
+
+        // 3. Waiting for before block newBlockIdx + 1 and newBlockIdx - 1
+        if (threadIdx.x == 0 || threadIdx.x == blockDim.x - 1) {
+            if (newBlockIdx > numBlocksPerRow) {
+                if (newBlockIdx % numBlocksPerRow != 0) {
+                    while (!isBlockFinished[newBlockIdx - numBlocksPerRow - 1]);
+                }
+                if (newBlockIdx % numBlocksPerRow != numBlocksPerRow - 1) {
+                    while (!isBlockFinished[newBlockIdx - numBlocksPerRow + 1]);
+                }
+                __threadfence();
+            }
+            if (c < inputWidth) {
+                minVal = input[convertIndex(currentRow + 1, c, inputWidth)];
+                if (c > 0)
+                    minVal = min(minVal, input[convertIndex(currentRow + 1, c - 1, inputWidth)]);
+                if (c + 1 < inputWidth)
+                    minVal = min(minVal, input[convertIndex(currentRow + 1, c + 1, inputWidth)]);
+            }
+        }
+
+        if (c < inputWidth)
             input[convertIndex(currentRow, c, inputWidth)] += minVal;
+
+        __syncthreads();
+
+        // 4. Mark Threads as Done
+        __threadfence();
+        if (threadIdx.x == 0) {
+            isBlockFinished[newBlockIdx] = true;
         }
     }
 }
 
-PnmImage ParallelSolutionV3::run(const PnmImage &inputImage, int argc, char **argv) {
+PnmImage ParallelSolutionV34::run(const PnmImage &inputImage, int argc, char **argv) {
 
     // Extract arguments
     int nDeletingSeams = 1;
@@ -30,7 +148,7 @@ PnmImage ParallelSolutionV3::run(const PnmImage &inputImage, int argc, char **ar
     }
 
     // Start Timer
-    printf("Running Parallel Solution Version 3 with blockSize=(%d;%d).\n", blockSize.x, blockSize.y);
+    printf("Running Parallel Solution Version 3 + 4 with blockSize=(%d;%d).\n", blockSize.x, blockSize.y);
     GpuTimer timer;
     timer.Start();
 
@@ -109,55 +227,53 @@ PnmImage ParallelSolutionV3::run(const PnmImage &inputImage, int argc, char **ar
     return outputImage;
 }
 
-void ParallelSolutionV3::calculateSeamMap(int32_t *d_inputImage, uint32_t inputWidth, uint32_t inputHeight,
-                                          uint32_t blockSize) {
+void ParallelSolutionV34::calculateSeamMap(int32_t *d_inputImage, uint32_t inputWidth, uint32_t inputHeight,
+                                           uint32_t blockSize) {
     // Create Host Memory
-    uint32_t gridSize = (inputWidth - 1) / blockSize + 1;
+    uint32_t gridSizeForward = ((inputWidth - 1) / blockSize + 1) * (inputHeight / 2 - 1);
+    uint32_t gridSizeBackward = ((inputWidth - 1) / blockSize + 1) * ((inputHeight - (inputHeight / 2)) - 1);
+    uint32_t zero = 0;
 
     // Create Device Memory
+    bool *isBlockFinishedForward;
+    CHECK(cudaMalloc(&isBlockFinishedForward, gridSizeForward * sizeof(bool)))
+    bool *isBlockFinishedBackward;
+    CHECK(cudaMalloc(&isBlockFinishedBackward, gridSizeBackward * sizeof(bool)))
+
+    // Copy Memory from Host to Device
+    CHECK(cudaMemcpyToSymbol(KernelFunction::blockCountForward, &zero, sizeof(u_int32_t), 0, cudaMemcpyHostToDevice))
+    CHECK(cudaMemset(isBlockFinishedForward, 0, gridSizeForward * sizeof(bool)))
+    CHECK(cudaMemcpyToSymbol(KernelFunction::blockCountBackward, &zero, sizeof(u_int32_t), 0, cudaMemcpyHostToDevice))
+    CHECK(cudaMemset(isBlockFinishedBackward, 0, gridSizeBackward * sizeof(bool)))
 
     // Run Device Methods
     cudaStream_t streamForward, streamBackward;
     cudaStreamCreate(&streamForward);
     cudaStreamCreate(&streamBackward);
 
-    for (int i = 1; i < inputHeight / 2; ++i) {
-        // Forward
-        KernelFunction::updateSeamMapKernel<<<gridSize, blockSize, 0, streamForward>>>(d_inputImage, inputWidth, i);
-        // Backward
-        if (int(inputHeight) - i - 1 >= inputHeight / 2) {
-            KernelFunction::updateSeamMapKernelBackward<<<gridSize, blockSize, 0, streamBackward>>>(d_inputImage, inputWidth,
-                    int(inputHeight) - i - 1);
-        }
-        cudaStreamSynchronize(streamForward);
-        cudaStreamSynchronize(streamBackward);
-        CHECK(cudaGetLastError())
-    }
+    KernelFunction::updateSeamMapKernelPipeliningForward<<<gridSizeForward, blockSize, 0, streamForward>>>(d_inputImage, inputWidth, isBlockFinishedForward);
+    KernelFunction::updateSeamMapKernelPipeliningBackward<<<gridSizeBackward, blockSize, 0, streamBackward>>>(d_inputImage, inputWidth, inputHeight, isBlockFinishedBackward);
 
-    if (inputHeight % 2 == 1) {
-        KernelFunction::updateSeamMapKernelBackward<<<gridSize, blockSize, 0, streamBackward>>>(d_inputImage, inputWidth,
-                int(inputHeight) - int(inputHeight) / 2 - 1);
-        cudaStreamSynchronize(streamForward);
-        cudaStreamSynchronize(streamBackward);
-        CHECK(cudaGetLastError())
-    }
-
+    cudaStreamSynchronize(streamForward);
+    cudaStreamSynchronize(streamBackward);
+    CHECK(cudaGetLastError())
     cudaStreamDestroy(streamForward);
     cudaStreamDestroy(streamBackward);
 
     // Copy Memory from Device to Host
 
     // Free Device Memory
+    CHECK(cudaFree(isBlockFinishedForward))
+    CHECK(cudaFree(isBlockFinishedBackward))
 
     // Free Host Memory
 
     // Return result
-
 }
 
 
 void
-ParallelSolutionV3::extractSeam(const int32_t *energyMap, uint32_t inputWidth, uint32_t inputHeight, uint32_t *seam) {
+ParallelSolutionV34::extractSeam(const int32_t *energyMap, uint32_t inputWidth, uint32_t inputHeight, uint32_t *seam) {
     // Find minSeam
     u_int32_t minValCol1 = 0;
     u_int32_t minValCol2 = 0;
@@ -233,4 +349,3 @@ ParallelSolutionV3::extractSeam(const int32_t *energyMap, uint32_t inputWidth, u
         seam[r] = minValCol2;
     }
 }
-

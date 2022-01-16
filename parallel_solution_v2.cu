@@ -1,12 +1,10 @@
 #include "timer.cuh"
 #include "parallel_solution_v2.cuh"
 
-#define TOTAL_FILTER_SIZE 9
-
-__constant__ int32_t c_filterX[TOTAL_FILTER_SIZE];
-__constant__ int32_t c_filterY[TOTAL_FILTER_SIZE];
-
 namespace KernelFunction {
+    __constant__ int32_t c_filterX[TOTAL_FILTER_SIZE];
+    __constant__ int32_t c_filterY[TOTAL_FILTER_SIZE];
+
     __global__ void
     convolutionKernel_v2(const int32_t *input, u_int32_t width, u_int32_t height, bool isXDirection,
                          u_int32_t filterSize, int32_t *output) {
@@ -101,8 +99,8 @@ PnmImage ParallelSolutionV2::run(const PnmImage &inputImage, int argc, char **ar
     CHECK(cudaMemcpy(d_inputImage, inputImage.getPixels(),
                      inputImage.getWidth() * inputImage.getHeight() * sizeof(uchar3), cudaMemcpyHostToDevice))
 
-    CHECK(cudaMemcpyToSymbol(c_filterX, SOBEL_X, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
-    CHECK(cudaMemcpyToSymbol(c_filterY, SOBEL_Y, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
+    CHECK(cudaMemcpyToSymbol(KernelFunction::c_filterX, SOBEL_X, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
+    CHECK(cudaMemcpyToSymbol(KernelFunction::c_filterY, SOBEL_Y, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
 
     // Run Kernel functions
     convertToGrayScale(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), blockSize, d_grayImage);
@@ -152,7 +150,7 @@ ParallelSolutionV2::calculateEnergyMap(const int32_t *d_inputImage, uint32_t inp
                                        dim3 blockSize, int32_t *d_outputImage) {
     // Create Host Memory
     dim3 gridSize((inputWidth - 1) / blockSize.x + 1, (inputHeight - 1) / blockSize.y + 1);
-    size_t smemSize = (blockSize.x + 3 - 1) * (blockSize.y + 3 - 1) * sizeof(int32_t);
+    size_t smemSize = (blockSize.x + FILTER_SIZE - 1) * (blockSize.y + FILTER_SIZE - 1) * sizeof(int32_t);
 
     // Create Device Memory
     int32_t *d_outputImageX;

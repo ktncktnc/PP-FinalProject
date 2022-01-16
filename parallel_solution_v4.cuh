@@ -5,6 +5,8 @@
 #include "parallel_solution_baseline.cuh"
 
 namespace KernelFunction {
+    extern __device__ u_int32_t blockCount;
+
     __global__ void
     updateSeamMapKernelPipelining(int32_t *input, u_int32_t inputWidth,
                                   bool volatile *isBlockFinished);

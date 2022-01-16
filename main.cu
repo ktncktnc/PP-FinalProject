@@ -6,6 +6,11 @@
 #include "parallel_solution_v2.cuh"
 #include "parallel_solution_v3.cuh"
 #include "parallel_solution_v4.cuh"
+#include "parallel_solution_v34.cuh"
+#include "parallel_solution_v23.cuh"
+#include "parallel_solution_v24.cuh"
+#include "parallel_solution_v234.cuh"
+#include <vector>
 
 bool extractFilesArgument(int argc, char **argv, char *&inputFileName, char *&outputFileName, int &solutionID) {
     if (argc < 4) {
@@ -18,7 +23,7 @@ bool extractFilesArgument(int argc, char **argv, char *&inputFileName, char *&ou
     return true;
 }
 
-const int N_PARALLEL_SOLUTIONS = 4;
+const int N_PARALLEL_SOLUTIONS = 8;
 BaseSolution *parallelSolutions[N_PARALLEL_SOLUTIONS];
 
 int main(int argc, char **argv) {
@@ -31,7 +36,7 @@ int main(int argc, char **argv) {
     if (!extractFilesArgument(argc, argv, inputFilename, outputFilename, solutionID))
         return EXIT_FAILURE;
 
-    if (solutionID < 1 || solutionID > N_PARALLEL_SOLUTIONS) {
+    if (solutionID < 0 || solutionID > N_PARALLEL_SOLUTIONS) {
         printf("The solution ID is invalid\n");
         return EXIT_FAILURE;
     }
@@ -43,21 +48,34 @@ int main(int argc, char **argv) {
     parallelSolutions[1] = new ParallelSolutionV2();
     parallelSolutions[2] = new ParallelSolutionV3();
     parallelSolutions[3] = new ParallelSolutionV4();
+    parallelSolutions[4] = new ParallelSolutionV23();
+    parallelSolutions[5] = new ParallelSolutionV24();
+    parallelSolutions[6] = new ParallelSolutionV34();
+    parallelSolutions[7] = new ParallelSolutionV234();
 
     PnmImage outputImageSequential = sequentialSolution->run(inputImage, argc - 4, argv + 4);
-    PnmImage outputImageParallel = parallelSolutions[solutionID - 1]->run(inputImage, argc - 4, argv + 4);
 
-
-    outputImageSequential.write("sequential_solution.pnm");
-    outputImageParallel.write(outputFilename);
-
-    outputImageSequential.compare(outputImageParallel);
+    if (solutionID == 0) {
+        // Print all Results
+        printf("Running all Parallels solutions and compare outputs...\n");
+        std::vector<PnmImage> outputImages;
+        for (auto &parallelSolution: parallelSolutions)
+            outputImages.push_back(parallelSolution->run(inputImage, argc - 4, argv + 4));
+        for (auto &outputImage: outputImages)
+            outputImageSequential.compare(outputImage);
+    } else {
+        printf("Running one solution...\n");
+        PnmImage outputParallel = parallelSolutions[solutionID - 1]->run(inputImage, argc - 4, argv + 4);
+        outputImageSequential.compare(outputParallel);
+        printf(R"(Outputs are written to "sequential_solution.pnm" (Sequential Output) and "%s" (Parallel Output).)",
+               outputFilename);
+        outputImageSequential.write("sequential_solution.pnm");
+        outputParallel.write(outputFilename);
+    }
 
     free(sequentialSolution);
-    free(parallelSolutions[0]);
-    free(parallelSolutions[1]);
-    free(parallelSolutions[2]);
-    free(parallelSolutions[3]);
+    for (auto &parallelSolution: parallelSolutions)
+        free(parallelSolution);
 
     return 0;
 }
