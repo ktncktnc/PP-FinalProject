@@ -14,7 +14,7 @@
 
 void printUserGuide(int list){
     if (list == 0)
-        printf("Usage:\tFinalProject <input path> <output path> <solutionID> (<blockSize.x> <blockSize.y>)\n");
+        printf("Usage:\tFinalProject <input path> <output path> <n seam> <solutionID> (<blockSize.x> <blockSize.y>)\n");
     else{
         printf("Solution ID: \tnumber from 0 to 8\n"
                "\t\t0: all\n"
