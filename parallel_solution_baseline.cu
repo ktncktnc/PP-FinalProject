@@ -196,7 +196,7 @@ IntImage ParallelSolutionBaseline::convertToGrayScale(const PnmImage &inputImage
     // Copy Memory from Device to Host
     CHECK(cudaMemcpy(outputImage.getPixels(), d_outputImage,
                      outputImage.getWidth() * outputImage.getHeight() * sizeof(int32_t), cudaMemcpyDeviceToHost))
-
+ 
     // Free Device Memory
     CHECK(cudaFree(d_inputImage))
     CHECK(cudaFree(d_outputImage))
@@ -249,6 +249,7 @@ void ParallelSolutionBaseline::extractSeam(const IntImage &energyMap, uint32_t *
                                                                energyMap.getWidth())]) {
             minValC = c;
         }
+
     // Trace back
     seam[energyMap.getHeight() - 1] = minValC;
     for (int r = int(energyMap.getHeight() - 2); r >= 0; r--) {
