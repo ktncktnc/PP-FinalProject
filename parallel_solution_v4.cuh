@@ -11,7 +11,7 @@ namespace KernelFunction {
 }
 class ParallelSolutionV4 : public ParallelSolutionBaseline {
 private:
-    static IntImage calculateSeamMap(const IntImage &inputImage, uint32_t blockSize = 32);
+    static void calculateSeamMap(int32_t *d_inputImage, uint32_t inputWidth, uint32_t inputHeight, uint32_t blockSize);
 
 public:
     PnmImage run(const PnmImage &inputImage, int argc, char **argv) override;

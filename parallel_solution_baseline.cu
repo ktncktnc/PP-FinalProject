@@ -73,6 +73,19 @@ namespace KernelFunction {
             output[convertIndex(r, c, inputWidth - 1)] = input[convertIndex(r, inputC, inputWidth)];
         }
     }
+
+    __global__ void
+    deleteSeamKernel(const int32_t *input, u_int32_t inputWidth, u_int32_t inputHeight, const u_int32_t *seam,
+                     int32_t *output) {
+        u_int32_t r = blockIdx.y * blockDim.y + threadIdx.y;
+        u_int32_t c = blockIdx.x * blockDim.x + threadIdx.x;
+        if (r < inputHeight && c + 1 < inputWidth) {
+            u_int32_t inputC = c;
+            if (inputC >= seam[r])
+                inputC++;
+            output[convertIndex(r, c, inputWidth - 1)] = input[convertIndex(r, inputC, inputWidth)];
+        }
+    }
 }
 
 const int32_t ParallelSolutionBaseline::SOBEL_X[3][3] = {{1, 0, -1},
@@ -83,6 +96,7 @@ const int32_t ParallelSolutionBaseline::SOBEL_Y[3][3] = {{1,  2,  1},
                                                          {-1, -2, -1}};
 
 PnmImage ParallelSolutionBaseline::run(const PnmImage &inputImage, int argc, char **argv) {
+
     // Extract arguments
     int nDeletingSeams = 1;
     dim3 blockSize(32, 32); // Default
@@ -92,177 +106,196 @@ PnmImage ParallelSolutionBaseline::run(const PnmImage &inputImage, int argc, cha
         blockSize.x = strtol(argv[1], nullptr, 10);
         blockSize.y = strtol(argv[2], nullptr, 10);
     }
+
+    // Start Timer
     printf("Running Baseline Parallel Solution with blockSize=(%d;%d).\n", blockSize.x, blockSize.y);
     GpuTimer timer;
     timer.Start();
 
-    PnmImage outputImage = inputImage;
-    for (int i = 0; i < nDeletingSeams; ++i) {
-        // 1. Convert to GrayScale
-        IntImage grayImage = convertToGrayScale(outputImage, blockSize);
-        // 2. Calculate the Energy Map
-        IntImage energyMap = calculateEnergyMap(grayImage, blockSize);
-        // 3. Dynamic Programming
-        IntImage seamMap = calculateSeamMap(energyMap, blockSize.x * blockSize.y);
-        // 4. Extract the seam
-        auto *seam = (uint32_t *) malloc(energyMap.getHeight() * sizeof(uint32_t));
-        extractSeam(seamMap, seam);
-        // 5. Delete the seam
-        outputImage = deleteSeam(outputImage, seam);
-        free(seam);
-    }
-    timer.Stop();
-    printf("Time: %.3f ms\n", timer.Elapsed());
-    printf("-------------------------------\n");
-    return outputImage;
-}
+    // Create Host Variable
+    PnmImage outputImage(inputImage.getWidth() - nDeletingSeams, inputImage.getHeight());
 
-IntImage ParallelSolutionBaseline::calculateEnergyMap(const IntImage &inputImage, dim3 blockSize) {
     // Create Host Memory
-    dim3 gridSize((inputImage.getWidth() - 1) / blockSize.x + 1, (inputImage.getHeight() - 1) / blockSize.y + 1);
-    IntImage outputImage = IntImage(inputImage.getWidth(), inputImage.getHeight());
-
-    // Create Device Memory
-    int32_t *d_filterX;
-    CHECK(cudaMalloc(&d_filterX, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
-    int32_t *d_filterY;
-    CHECK(cudaMalloc(&d_filterY, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
-    int32_t *d_inputImage;
-    CHECK(cudaMalloc(&d_inputImage, inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t)))
-    int32_t *d_outputImageX;
-    CHECK(cudaMalloc(&d_outputImageX, outputImage.getWidth() * outputImage.getHeight() * sizeof(int32_t)))
-    int32_t *d_outputImageY;
-    CHECK(cudaMalloc(&d_outputImageY, outputImage.getWidth() * outputImage.getHeight() * sizeof(int32_t)))
-    int32_t *d_outputImage;
-    CHECK(cudaMalloc(&d_outputImage, outputImage.getWidth() * outputImage.getHeight() * sizeof(int32_t)))
-
-    // Copy Memory from Host to Device
-    CHECK(cudaMemcpy(d_filterX, SOBEL_X, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t), cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(d_filterY, SOBEL_Y, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t), cudaMemcpyHostToDevice))
-    CHECK(cudaMemcpy(d_inputImage, inputImage.getPixels(),
-                     inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t), cudaMemcpyHostToDevice))
-
-    // Run Device Methods
-    KernelFunction::convolutionKernel<<<gridSize, blockSize>>>(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), d_filterX, FILTER_SIZE, d_outputImageX);
-    cudaDeviceSynchronize();
-    CHECK(cudaGetLastError())
-
-    KernelFunction::convolutionKernel<<<gridSize, blockSize>>>(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), d_filterY, FILTER_SIZE, d_outputImageY);
-    cudaDeviceSynchronize();
-    CHECK(cudaGetLastError())
-
-    KernelFunction::addAbsKernel<<<gridSize, blockSize>>>(d_outputImageX, d_outputImageY, outputImage.getWidth(), outputImage.getHeight(), d_outputImage);
-    cudaDeviceSynchronize();
-    CHECK(cudaGetLastError())
-
-    // Copy Memory from Device to Host
-    CHECK(cudaMemcpy(outputImage.getPixels(), d_outputImage,
-                     outputImage.getWidth() * outputImage.getHeight() * sizeof(int32_t), cudaMemcpyDeviceToHost))
-
-    // Free Device Memory
-    CHECK(cudaFree(d_filterX))
-    CHECK(cudaFree(d_filterY))
-    CHECK(cudaFree(d_inputImage))
-    CHECK(cudaFree(d_outputImageX))
-    CHECK(cudaFree(d_outputImageY))
-    CHECK(cudaFree(d_outputImage))
-
-    // Free Host Memory
-
-    // Return result
-    return outputImage;
-}
-
-IntImage ParallelSolutionBaseline::convertToGrayScale(const PnmImage &inputImage, dim3 blockSize) {
-    // Create Host Memory
-    dim3 gridSize((inputImage.getWidth() - 1) / blockSize.x + 1, (inputImage.getHeight() - 1) / blockSize.y + 1);
-    IntImage outputImage = IntImage(inputImage.getWidth(), inputImage.getHeight());
+    auto *seam = (uint32_t *) malloc(inputImage.getHeight() * sizeof(uint32_t));
+    auto *energyMap = (int32_t *) malloc(inputImage.getHeight() * inputImage.getWidth() * sizeof(int32_t));
 
     // Create Device Memory
     uchar3 *d_inputImage;
     CHECK(cudaMalloc(&d_inputImage, inputImage.getWidth() * inputImage.getHeight() * sizeof(uchar3)))
-    int32_t *d_outputImage;
-    CHECK(cudaMalloc(&d_outputImage, outputImage.getWidth() * outputImage.getHeight() * sizeof(int32_t)))
+    uchar3 *d_inputImageTemp;
+    CHECK(cudaMalloc(&d_inputImageTemp, inputImage.getWidth() * inputImage.getHeight() * sizeof(uchar3)))
+    int32_t *d_grayImage;
+    CHECK(cudaMalloc(&d_grayImage, inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t)))
+    int32_t *d_grayImageTemp;
+    CHECK(cudaMalloc(&d_grayImageTemp, inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t)))
+    int32_t *d_energyMap;
+    CHECK(cudaMalloc(&d_energyMap, inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t)))
+    int32_t *d_filterX;
+    CHECK(cudaMalloc(&d_filterX, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
+    int32_t *d_filterY;
+    CHECK(cudaMalloc(&d_filterY, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
 
     // Copy Memory from Host to Device
     CHECK(cudaMemcpy(d_inputImage, inputImage.getPixels(),
                      inputImage.getWidth() * inputImage.getHeight() * sizeof(uchar3), cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(d_filterX, SOBEL_X, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t), cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(d_filterY, SOBEL_Y, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t), cudaMemcpyHostToDevice))
+
+    // Run Kernel functions
+    convertToGrayScale(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), blockSize, d_grayImage);
+    for (int i = 0; i < nDeletingSeams; ++i) {
+        // 1. Calculate the Energy Map
+        calculateEnergyMap(d_grayImage, inputImage.getWidth() - i, inputImage.getHeight(), d_filterX, d_filterY,
+                           FILTER_SIZE, blockSize, d_energyMap);
+        // 2. Dynamic Programming
+        calculateSeamMap(d_energyMap, inputImage.getWidth() - i, inputImage.getHeight(), blockSize.x * blockSize.y);
+        // 3. Extract the seam
+        CHECK(cudaMemcpy(energyMap, d_energyMap,
+                         (inputImage.getWidth() - i) * inputImage.getHeight() * sizeof(int32_t),
+                         cudaMemcpyDeviceToHost));
+        extractSeam(energyMap, inputImage.getWidth() - i, inputImage.getHeight(), seam);
+        // 4. Delete the seam
+        deleteSeam(d_grayImage, inputImage.getWidth() - i, inputImage.getHeight(), seam, blockSize, d_grayImageTemp);
+        deleteSeam(d_inputImage, inputImage.getWidth() - i, inputImage.getHeight(), seam, blockSize, d_inputImageTemp);
+        swap(d_grayImage, d_grayImageTemp);
+        swap(d_inputImage, d_inputImageTemp);
+    }
+
+    // Copy memory from device to host
+    CHECK(cudaMemcpy(outputImage.getPixels(), d_inputImage,
+                     outputImage.getWidth() * outputImage.getHeight() * sizeof(uchar3), cudaMemcpyDeviceToHost))
+
+    // Free Device Memory
+    CHECK(cudaFree(d_inputImage))
+    CHECK(cudaFree(d_inputImageTemp))
+    CHECK(cudaFree(d_grayImage))
+    CHECK(cudaFree(d_grayImageTemp))
+    CHECK(cudaFree(d_energyMap))
+    CHECK(cudaFree(d_filterX))
+    CHECK(cudaFree(d_filterY))
+
+    // Free Host Memory
+    free(seam);
+    free(energyMap);
+
+    // Stop Timer
+    timer.Stop();
+    printf("Time: %.3f ms\n", timer.Elapsed());
+    printf("-------------------------------\n");
+
+    // Return
+    return outputImage;
+}
+
+void ParallelSolutionBaseline::convertToGrayScale(const uchar3 *d_inputImage, uint32_t inputWidth, uint32_t inputHeight,
+                                                  dim3 blockSize, int32_t *d_outputImage) {
+    // Create Host Memory
+    dim3 gridSize((inputWidth - 1) / blockSize.x + 1, (inputHeight - 1) / blockSize.y + 1);
+
+    // Copy Memory from Host to Device
 
     // Run Device Methods
-    KernelFunction::convertToGrayScaleKernel<<<gridSize, blockSize>>>(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), d_outputImage);
+    KernelFunction::convertToGrayScaleKernel<<<gridSize, blockSize>>>(d_inputImage, inputWidth, inputHeight, d_outputImage);
     cudaDeviceSynchronize();
     CHECK(cudaGetLastError())
 
     // Copy Memory from Device to Host
-    CHECK(cudaMemcpy(outputImage.getPixels(), d_outputImage,
-                     outputImage.getWidth() * outputImage.getHeight() * sizeof(int32_t), cudaMemcpyDeviceToHost))
- 
+
     // Free Device Memory
-    CHECK(cudaFree(d_inputImage))
-    CHECK(cudaFree(d_outputImage))
 
     // Free Host Memory
 
     // Return result
-    return outputImage;
 }
 
-IntImage ParallelSolutionBaseline::calculateSeamMap(const IntImage &inputImage, uint32_t blockSize) {
+void
+ParallelSolutionBaseline::calculateEnergyMap(const int32_t *d_inputImage, uint32_t inputWidth, uint32_t inputHeight,
+                                             const int32_t *d_filterX, const int32_t *d_filterY, uint32_t filterSize,
+                                             dim3 blockSize, int32_t *d_outputImage) {
     // Create Host Memory
-    uint32_t gridSize = (inputImage.getWidth() - 1) / blockSize + 1;
-    IntImage outputImage = IntImage(inputImage.getWidth(), inputImage.getHeight());
+    dim3 gridSize((inputWidth - 1) / blockSize.x + 1, (inputHeight - 1) / blockSize.y + 1);
 
     // Create Device Memory
-    int32_t *d_inputImage;
-    CHECK(cudaMalloc(&d_inputImage, inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t)))
+    int32_t *d_outputImageX;
+    CHECK(cudaMalloc(&d_outputImageX, inputWidth * inputHeight * sizeof(int32_t)))
+    int32_t *d_outputImageY;
+    CHECK(cudaMalloc(&d_outputImageY, inputWidth * inputHeight * sizeof(int32_t)))
 
     // Copy Memory from Host to Device
-    CHECK(cudaMemcpy(d_inputImage, inputImage.getPixels(),
-                     inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t), cudaMemcpyHostToDevice))
 
     // Run Device Methods
-    for (int i = 1; i < inputImage.getHeight(); ++i) {
-        KernelFunction::updateSeamMapKernel<<<gridSize, blockSize>>>(d_inputImage, inputImage.getWidth(), i);
+    KernelFunction::convolutionKernel<<<gridSize, blockSize>>>(d_inputImage, inputWidth, inputHeight, d_filterX, filterSize, d_outputImageX);
+    cudaDeviceSynchronize();
+    CHECK(cudaGetLastError())
+
+    KernelFunction::convolutionKernel<<<gridSize, blockSize>>>(d_inputImage, inputWidth, inputHeight, d_filterY, filterSize, d_outputImageY);
+    cudaDeviceSynchronize();
+    CHECK(cudaGetLastError())
+
+    KernelFunction::addAbsKernel<<<gridSize, blockSize>>>(d_outputImageX, d_outputImageY, inputWidth, inputHeight, d_outputImage);
+    cudaDeviceSynchronize();
+    CHECK(cudaGetLastError())
+
+    // Copy Memory from Device to Host
+
+    // Free Device Memory
+    CHECK(cudaFree(d_outputImageX))
+    CHECK(cudaFree(d_outputImageY))
+
+    // Free Host Memory
+
+    // Return result
+}
+
+void ParallelSolutionBaseline::calculateSeamMap(int32_t *d_inputImage, uint32_t inputWidth, uint32_t inputHeight,
+                                                uint32_t blockSize) {
+    // Create Host Memory
+    uint32_t gridSize = (inputWidth - 1) / blockSize + 1;
+
+    // Create Device Memory
+
+    // Copy Memory from Host to Device
+
+    // Run Device Methods
+    for (int i = 1; i < inputHeight; ++i) {
+        KernelFunction::updateSeamMapKernel<<<gridSize, blockSize>>>(d_inputImage, inputWidth, i);
         cudaDeviceSynchronize();
         CHECK(cudaGetLastError())
     }
 
     // Copy Memory from Device to Host
-    CHECK(cudaMemcpy(outputImage.getPixels(), d_inputImage,
-                     outputImage.getWidth() * outputImage.getHeight() * sizeof(int32_t), cudaMemcpyDeviceToHost))
 
     // Free Device Memory
-    CHECK(cudaFree(d_inputImage))
 
     // Free Host Memory
 
     // Return result
-    return outputImage;
 }
 
-void ParallelSolutionBaseline::extractSeam(const IntImage &energyMap, uint32_t *seam) {
+void
+ParallelSolutionBaseline::extractSeam(const int32_t *energyMap, uint32_t inputWidth, uint32_t inputHeight,
+                                      uint32_t *seam) {
     // Find minSeam
     u_int32_t minValC = 0;
-    for (int c = 1; c < energyMap.getWidth(); ++c)
-        if (energyMap.getPixels()[KernelFunction::convertIndex(energyMap.getHeight() - 1, c, energyMap.getWidth())] <
-            energyMap.getPixels()[KernelFunction::convertIndex(energyMap.getHeight() - 1, minValC,
-                                                               energyMap.getWidth())]) {
+    for (int c = 1; c < inputWidth; ++c)
+        if (energyMap[KernelFunction::convertIndex(inputHeight - 1, c, inputWidth)] <
+            energyMap[KernelFunction::convertIndex(inputHeight - 1, minValC,
+                                                   inputWidth)]) {
             minValC = c;
         }
-
     // Trace back
-    seam[energyMap.getHeight() - 1] = minValC;
-    for (int r = int(energyMap.getHeight() - 2); r >= 0; r--) {
+    seam[inputHeight - 1] = minValC;
+    for (int r = int(inputHeight - 2); r >= 0; r--) {
         auto c = minValC;
         if (c > 0) {
-            if (energyMap.getPixels()[KernelFunction::convertIndex(r, c - 1, energyMap.getWidth())] <=
-                energyMap.getPixels()[KernelFunction::convertIndex(r, minValC, energyMap.getWidth())]) {
+            if (energyMap[KernelFunction::convertIndex(r, c - 1, inputWidth)] <=
+                energyMap[KernelFunction::convertIndex(r, minValC, inputWidth)]) {
                 minValC = c - 1;
             }
         }
-        if (c + 1 < energyMap.getWidth()) {
-            if (energyMap.getPixels()[KernelFunction::convertIndex(r, c + 1, energyMap.getWidth())] <
-                energyMap.getPixels()[KernelFunction::convertIndex(r, minValC, energyMap.getWidth())]) {
+        if (c + 1 < inputWidth) {
+            if (energyMap[KernelFunction::convertIndex(r, c + 1, inputWidth)] <
+                energyMap[KernelFunction::convertIndex(r, minValC, inputWidth)]) {
                 minValC = c + 1;
             }
         }
@@ -270,43 +303,76 @@ void ParallelSolutionBaseline::extractSeam(const IntImage &energyMap, uint32_t *
     }
 }
 
-PnmImage ParallelSolutionBaseline::deleteSeam(const PnmImage &inputImage, uint32_t *seam, dim3 blockSize) {
+void ParallelSolutionBaseline::deleteSeam(const int32_t *d_inputImage, uint32_t inputWidth, uint32_t inputHeight,
+                                          const uint32_t *seam, dim3 blockSize, int32_t *d_outputImage) {
     // Create Host Memory
-    dim3 gridSize((inputImage.getWidth() - 1) / blockSize.x + 1, (inputImage.getHeight() - 1) / blockSize.y + 1);
-    PnmImage outputImage = PnmImage(inputImage.getWidth() - 1, inputImage.getHeight());
+    dim3 gridSize((inputWidth - 1) / blockSize.x + 1, (inputHeight - 1) / blockSize.y + 1);
 
     // Create Device Memory
-    uchar3 *d_inputImage;
-    CHECK(cudaMalloc(&d_inputImage, inputImage.getWidth() * inputImage.getHeight() * sizeof(uchar3)))
     u_int32_t *d_seam;
-    CHECK(cudaMalloc(&d_seam, outputImage.getHeight() * sizeof(u_int32_t)))
-    uchar3 *d_outputImage;
-    CHECK(cudaMalloc(&d_outputImage, outputImage.getWidth() * outputImage.getHeight() * sizeof(uchar3)))
+    CHECK(cudaMalloc(&d_seam, inputHeight * sizeof(u_int32_t)))
 
     // Copy Memory from Host to Device
-    CHECK(cudaMemcpy(d_inputImage, inputImage.getPixels(),
-                     inputImage.getWidth() * inputImage.getHeight() * sizeof(uchar3), cudaMemcpyHostToDevice))
     CHECK(cudaMemcpy(d_seam, seam,
-                     inputImage.getHeight() * sizeof(u_int32_t), cudaMemcpyHostToDevice))
+                     inputHeight * sizeof(u_int32_t), cudaMemcpyHostToDevice))
 
     // Run Device Methods
-    KernelFunction::deleteSeamKernel<<<gridSize, blockSize>>>(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), d_seam, d_outputImage);
+    KernelFunction::deleteSeamKernel<<<gridSize, blockSize>>>(d_inputImage, inputWidth, inputHeight, d_seam, d_outputImage);
     cudaDeviceSynchronize();
     CHECK(cudaGetLastError())
 
     // Copy Memory from Device to Host
-    CHECK(cudaMemcpy(outputImage.getPixels(), d_outputImage,
-                     outputImage.getWidth() * outputImage.getHeight() * sizeof(uchar3), cudaMemcpyDeviceToHost))
 
     // Free Device Memory
-    CHECK(cudaFree(d_inputImage))
     CHECK(cudaFree(d_seam))
-    CHECK(cudaFree(d_outputImage))
 
     // Free Host Memory
 
     // Return result
-    return outputImage;
 }
+
+void ParallelSolutionBaseline::deleteSeam(const uchar3 *d_inputImage, uint32_t inputWidth, uint32_t inputHeight,
+                                          const uint32_t *seam, dim3 blockSize, uchar3 *d_outputImage) {
+    // Create Host Memory
+    dim3 gridSize((inputWidth - 1) / blockSize.x + 1, (inputHeight - 1) / blockSize.y + 1);
+
+    // Create Device Memory
+    u_int32_t *d_seam;
+    CHECK(cudaMalloc(&d_seam, inputHeight * sizeof(u_int32_t)))
+
+    // Copy Memory from Host to Device
+    CHECK(cudaMemcpy(d_seam, seam,
+                     inputHeight * sizeof(u_int32_t), cudaMemcpyHostToDevice))
+
+    // Run Device Methods
+    KernelFunction::deleteSeamKernel<<<gridSize, blockSize>>>(d_inputImage, inputWidth, inputHeight, d_seam, d_outputImage);
+    cudaDeviceSynchronize();
+    CHECK(cudaGetLastError())
+
+    // Copy Memory from Device to Host
+
+    // Free Device Memory
+    CHECK(cudaFree(d_seam))
+
+    // Free Host Memory
+
+    // Return result
+}
+
+void ParallelSolutionBaseline::swap(int32_t *&pa, int32_t *&pb) {
+    auto temp = pa;
+    pa = pb;
+    pb = temp;
+}
+
+void ParallelSolutionBaseline::swap(uchar3 *&pa, uchar3 *&pb) {
+    auto temp = pa;
+    pa = pb;
+    pb = temp;
+}
+
+
+
+
 
 

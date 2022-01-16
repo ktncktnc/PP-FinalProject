@@ -17,52 +17,8 @@ namespace KernelFunction {
     }
 }
 
-IntImage ParallelSolutionV3::calculateSeamMap(const IntImage &inputImage, uint32_t blockSize) {
-    // Create Host Memory
-    uint32_t gridSize = (inputImage.getWidth() - 1) / blockSize + 1;
-    IntImage outputImage = IntImage(inputImage.getWidth(), inputImage.getHeight());
-
-    // Create Device Memory
-    int32_t *d_inputImage;
-    CHECK(cudaMalloc(&d_inputImage, inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t)))
-
-    // Copy Memory from Host to Device
-    CHECK(cudaMemcpy(d_inputImage, inputImage.getPixels(),
-                     inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t), cudaMemcpyHostToDevice))
-
-    // Run Device Methods
-    cudaStream_t streamForward, streamBackward;
-    cudaStreamCreate(&streamForward);
-    cudaStreamCreate(&streamBackward);
-    for (int i = 1; i <= inputImage.getHeight() / 2; ++i) {
-        // Forward
-        KernelFunction::updateSeamMapKernel<<<gridSize, blockSize, 0, streamForward>>>(d_inputImage, inputImage.getWidth(), i);
-        // Backward
-        if (int(inputImage.getHeight()) - i - 1 > inputImage.getHeight() / 2) {
-            KernelFunction::updateSeamMapKernelBackward<<<gridSize, blockSize, 0, streamBackward>>>(d_inputImage, inputImage.getWidth(),
-                    int(inputImage.getHeight()) - i - 1);
-        }
-        cudaStreamSynchronize(streamForward);
-        cudaStreamSynchronize(streamBackward);
-        CHECK(cudaGetLastError())
-    }
-    cudaStreamDestroy(streamForward);
-    cudaStreamDestroy(streamBackward);
-
-    // Copy Memory from Device to Host
-    CHECK(cudaMemcpy(outputImage.getPixels(), d_inputImage,
-                     outputImage.getWidth() * outputImage.getHeight() * sizeof(int32_t), cudaMemcpyDeviceToHost))
-
-    // Free Device Memory
-    CHECK(cudaFree(d_inputImage))
-
-    // Free Host Memory
-
-    // Return result
-    return outputImage;
-}
-
 PnmImage ParallelSolutionV3::run(const PnmImage &inputImage, int argc, char **argv) {
+
     // Extract arguments
     int nDeletingSeams = 1;
     dim3 blockSize(32, 32); // Default
@@ -72,104 +28,199 @@ PnmImage ParallelSolutionV3::run(const PnmImage &inputImage, int argc, char **ar
         blockSize.x = strtol(argv[1], nullptr, 10);
         blockSize.y = strtol(argv[2], nullptr, 10);
     }
+
+    // Start Timer
     printf("Running Parallel Solution Version 3 with blockSize=(%d;%d).\n", blockSize.x, blockSize.y);
     GpuTimer timer;
     timer.Start();
 
-    PnmImage outputImage = inputImage;
+    // Create Host Variable
+    PnmImage outputImage(inputImage.getWidth() - nDeletingSeams, inputImage.getHeight());
+
+    // Create Host Memory
+    auto *seam = (uint32_t *) malloc(inputImage.getHeight() * sizeof(uint32_t));
+    auto *energyMap = (int32_t *) malloc(inputImage.getHeight() * inputImage.getWidth() * sizeof(int32_t));
+
+    // Create Device Memory
+    uchar3 *d_inputImage;
+    CHECK(cudaMalloc(&d_inputImage, inputImage.getWidth() * inputImage.getHeight() * sizeof(uchar3)))
+    uchar3 *d_inputImageTemp;
+    CHECK(cudaMalloc(&d_inputImageTemp, inputImage.getWidth() * inputImage.getHeight() * sizeof(uchar3)))
+    int32_t *d_grayImage;
+    CHECK(cudaMalloc(&d_grayImage, inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t)))
+    int32_t *d_grayImageTemp;
+    CHECK(cudaMalloc(&d_grayImageTemp, inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t)))
+    int32_t *d_energyMap;
+    CHECK(cudaMalloc(&d_energyMap, inputImage.getWidth() * inputImage.getHeight() * sizeof(int32_t)))
+    int32_t *d_filterX;
+    CHECK(cudaMalloc(&d_filterX, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
+    int32_t *d_filterY;
+    CHECK(cudaMalloc(&d_filterY, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t)))
+
+    // Copy Memory from Host to Device
+    CHECK(cudaMemcpy(d_inputImage, inputImage.getPixels(),
+                     inputImage.getWidth() * inputImage.getHeight() * sizeof(uchar3), cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(d_filterX, SOBEL_X, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t), cudaMemcpyHostToDevice))
+    CHECK(cudaMemcpy(d_filterY, SOBEL_Y, FILTER_SIZE * FILTER_SIZE * sizeof(int32_t), cudaMemcpyHostToDevice))
+
+    // Run Kernel functions
+    convertToGrayScale(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), blockSize, d_grayImage);
     for (int i = 0; i < nDeletingSeams; ++i) {
-        // 1. Convert to GrayScale
-        IntImage grayImage = convertToGrayScale(outputImage, blockSize);
-        // 2. Calculate the Energy Map
-        IntImage energyMap = calculateEnergyMap(grayImage, blockSize);
-        // 3. Dynamic Programming
-        IntImage seamMap = calculateSeamMap(energyMap, blockSize.x * blockSize.y);
-        // 4. Extract the seam
-        auto *seam = (uint32_t *) malloc(energyMap.getHeight() * sizeof(uint32_t));
-        extractSeam(seamMap, seam);
-        // 5. Delete the seam
-        outputImage = deleteSeam(outputImage, seam);
-        free(seam);
+        // 1. Calculate the Energy Map
+        calculateEnergyMap(d_grayImage, inputImage.getWidth() - i, inputImage.getHeight(), d_filterX, d_filterY,
+                           FILTER_SIZE, blockSize, d_energyMap);
+        // 2. Dynamic Programming
+        calculateSeamMap(d_energyMap, inputImage.getWidth() - i, inputImage.getHeight(), blockSize.x * blockSize.y);
+        // 3. Extract the seam
+        CHECK(cudaMemcpy(energyMap, d_energyMap,
+                         (inputImage.getWidth() - i) * inputImage.getHeight() * sizeof(int32_t),
+                         cudaMemcpyDeviceToHost))
+        extractSeam(energyMap, inputImage.getWidth() - i, inputImage.getHeight(), seam);
+        // 4. Delete the seam
+        deleteSeam(d_grayImage, inputImage.getWidth() - i, inputImage.getHeight(), seam, blockSize, d_grayImageTemp);
+        deleteSeam(d_inputImage, inputImage.getWidth() - i, inputImage.getHeight(), seam, blockSize, d_inputImageTemp);
+        swap(d_grayImage, d_grayImageTemp);
+        swap(d_inputImage, d_inputImageTemp);
     }
+
+    // Copy memory from device to host
+    CHECK(cudaMemcpy(outputImage.getPixels(), d_inputImage,
+                     outputImage.getWidth() * outputImage.getHeight() * sizeof(uchar3), cudaMemcpyDeviceToHost))
+
+    // Free Device Memory
+    CHECK(cudaFree(d_inputImage))
+    CHECK(cudaFree(d_inputImageTemp))
+    CHECK(cudaFree(d_grayImage))
+    CHECK(cudaFree(d_grayImageTemp))
+    CHECK(cudaFree(d_energyMap))
+    CHECK(cudaFree(d_filterX))
+    CHECK(cudaFree(d_filterY))
+
+    // Free Host Memory
+    free(seam);
+    free(energyMap);
+
+    // Stop Timer
     timer.Stop();
     printf("Time: %.3f ms\n", timer.Elapsed());
     printf("-------------------------------\n");
+
+    // Return
     return outputImage;
 }
 
-void ParallelSolutionV3::extractSeam(const IntImage &energyMap, uint32_t *seam) {
+void ParallelSolutionV3::calculateSeamMap(int32_t *d_inputImage, uint32_t inputWidth, uint32_t inputHeight,
+                                          uint32_t blockSize) {
+    // Create Host Memory
+    uint32_t gridSize = (inputWidth - 1) / blockSize + 1;
+
+    // Create Device Memory
+
+    // Run Device Methods
+    cudaStream_t streamForward, streamBackward;
+    cudaStreamCreate(&streamForward);
+    cudaStreamCreate(&streamBackward);
+    for (int i = 1; i <= inputHeight / 2; ++i) {
+        // Forward
+        KernelFunction::updateSeamMapKernel<<<gridSize, blockSize, 0, streamForward>>>(d_inputImage, inputWidth, i);
+        // Backward
+        if (int(inputHeight) - i - 1 > inputHeight / 2) {
+            KernelFunction::updateSeamMapKernelBackward<<<gridSize, blockSize, 0, streamBackward>>>(d_inputImage, inputWidth,
+                    int(inputHeight) - i - 1);
+        }
+        cudaStreamSynchronize(streamForward);
+        cudaStreamSynchronize(streamBackward);
+        CHECK(cudaGetLastError())
+    }
+    cudaStreamDestroy(streamForward);
+    cudaStreamDestroy(streamBackward);
+
+    // Copy Memory from Device to Host
+
+    // Free Device Memory
+
+    // Free Host Memory
+
+    // Return result
+
+}
+
+
+void
+ParallelSolutionV3::extractSeam(const int32_t *energyMap, uint32_t inputWidth, uint32_t inputHeight, uint32_t *seam) {
     // Find minSeam
     u_int32_t minValCol1 = 0;
     u_int32_t minValCol2 = 0;
-    u_int32_t middleRow = energyMap.getHeight() / 2;
-    int32_t bestVal = energyMap.getPixels()[KernelFunction::convertIndex(middleRow, 0, energyMap.getWidth())] +
-                      energyMap.getPixels()[KernelFunction::convertIndex(middleRow + 1, 0, energyMap.getWidth())];
+    u_int32_t middleRow = inputHeight / 2;
+    int32_t bestVal = energyMap[KernelFunction::convertIndex(middleRow, 0, inputWidth)] +
+                      energyMap[KernelFunction::convertIndex(middleRow + 1, 0, inputWidth)];
 
-    for (int c = 0; c < energyMap.getWidth(); ++c) {
-        if (energyMap.getPixels()[KernelFunction::convertIndex(middleRow, c, energyMap.getWidth())] +
-            energyMap.getPixels()[KernelFunction::convertIndex(middleRow + 1, c, energyMap.getWidth())]
+    for (int c = 0; c < inputWidth; ++c) {
+        if (energyMap[KernelFunction::convertIndex(middleRow, c, inputWidth)] +
+            energyMap[KernelFunction::convertIndex(middleRow + 1, c, inputWidth)]
             < bestVal) {
-            bestVal = energyMap.getPixels()[KernelFunction::convertIndex(middleRow, c, energyMap.getWidth())] +
-                      energyMap.getPixels()[KernelFunction::convertIndex(middleRow + 1, c, energyMap.getWidth())];
+            bestVal = energyMap[KernelFunction::convertIndex(middleRow, c, inputWidth)] +
+                      energyMap[KernelFunction::convertIndex(middleRow + 1, c, inputWidth)];
             minValCol1 = c;
             minValCol2 = c;
         }
 
         if (c > 0 &&
-            energyMap.getPixels()[KernelFunction::convertIndex(middleRow, c - 1, energyMap.getWidth())] +
-            energyMap.getPixels()[KernelFunction::convertIndex(middleRow + 1, c, energyMap.getWidth())]
+            energyMap[KernelFunction::convertIndex(middleRow, c - 1, inputWidth)] +
+            energyMap[KernelFunction::convertIndex(middleRow + 1, c, inputWidth)]
             <= bestVal) {
-            bestVal = energyMap.getPixels()[KernelFunction::convertIndex(middleRow, c - 1, energyMap.getWidth())] +
-                      energyMap.getPixels()[KernelFunction::convertIndex(middleRow + 1, c, energyMap.getWidth())];
+            bestVal = energyMap[KernelFunction::convertIndex(middleRow, c - 1, inputWidth)] +
+                      energyMap[KernelFunction::convertIndex(middleRow + 1, c, inputWidth)];
             minValCol1 = c - 1;
             minValCol2 = c;
         }
 
-        if (c + 1 < energyMap.getWidth() &&
-            energyMap.getPixels()[KernelFunction::convertIndex(middleRow, c + 1, energyMap.getWidth())] +
-            energyMap.getPixels()[KernelFunction::convertIndex(middleRow + 1, c, energyMap.getWidth())]
+        if (c + 1 < inputWidth &&
+            energyMap[KernelFunction::convertIndex(middleRow, c + 1, inputWidth)] +
+            energyMap[KernelFunction::convertIndex(middleRow + 1, c, inputWidth)]
             < bestVal) {
-            bestVal = energyMap.getPixels()[KernelFunction::convertIndex(middleRow, c + 1, energyMap.getWidth())] +
-                      energyMap.getPixels()[KernelFunction::convertIndex(middleRow + 1, c, energyMap.getWidth())];
+            bestVal = energyMap[KernelFunction::convertIndex(middleRow, c + 1, inputWidth)] +
+                      energyMap[KernelFunction::convertIndex(middleRow + 1, c, inputWidth)];
             minValCol1 = c + 1;
             minValCol2 = c;
         }
     }
     // Trace back
-    seam[energyMap.getHeight() / 2] = minValCol1;
-    seam[energyMap.getHeight() / 2 + 1] = minValCol2;
+    seam[inputHeight / 2] = minValCol1;
+    seam[inputHeight / 2 + 1] = minValCol2;
 
-    for (int r = int(energyMap.getHeight() / 2 - 1); r >= 0; --r) {
+    for (int r = int(inputHeight / 2 - 1); r >= 0; --r) {
         auto c = minValCol1;
         if (c > 0) {
-            if (energyMap.getPixels()[KernelFunction::convertIndex(r, c - 1, energyMap.getWidth())] <=
-                energyMap.getPixels()[KernelFunction::convertIndex(r, minValCol1, energyMap.getWidth())]) {
+            if (energyMap[KernelFunction::convertIndex(r, c - 1, inputWidth)] <=
+                energyMap[KernelFunction::convertIndex(r, minValCol1, inputWidth)]) {
                 minValCol1 = c - 1;
             }
         }
-        if (c + 1 < energyMap.getWidth()) {
-            if (energyMap.getPixels()[KernelFunction::convertIndex(r, c + 1, energyMap.getWidth())] <
-                energyMap.getPixels()[KernelFunction::convertIndex(r, minValCol1, energyMap.getWidth())]) {
+        if (c + 1 < inputWidth) {
+            if (energyMap[KernelFunction::convertIndex(r, c + 1, inputWidth)] <
+                energyMap[KernelFunction::convertIndex(r, minValCol1, inputWidth)]) {
                 minValCol1 = c + 1;
             }
         }
         seam[r] = minValCol1;
     }
 
-    for (int r = int(energyMap.getHeight() / 2 + 2); r < energyMap.getHeight(); ++r) {
+    for (int r = int(inputHeight / 2 + 2); r < inputHeight; ++r) {
         auto c = minValCol2;
         if (c > 0) {
-            if (energyMap.getPixels()[KernelFunction::convertIndex(r, c - 1, energyMap.getWidth())] <=
-                energyMap.getPixels()[KernelFunction::convertIndex(r, minValCol2, energyMap.getWidth())]) {
+            if (energyMap[KernelFunction::convertIndex(r, c - 1, inputWidth)] <=
+                energyMap[KernelFunction::convertIndex(r, minValCol2, inputWidth)]) {
                 minValCol2 = c - 1;
             }
         }
-        if (c + 1 < energyMap.getWidth()) {
-            if (energyMap.getPixels()[KernelFunction::convertIndex(r, c + 1, energyMap.getWidth())] <
-                energyMap.getPixels()[KernelFunction::convertIndex(r, minValCol2, energyMap.getWidth())]) {
+        if (c + 1 < inputWidth) {
+            if (energyMap[KernelFunction::convertIndex(r, c + 1, inputWidth)] <
+                energyMap[KernelFunction::convertIndex(r, minValCol2, inputWidth)]) {
                 minValCol2 = c + 1;
             }
         }
         seam[r] = minValCol2;
     }
 }
+

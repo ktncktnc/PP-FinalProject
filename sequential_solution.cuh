@@ -3,7 +3,7 @@
 #include "solution.cuh"
 
 namespace SequentialFunction {
-    void convolution(int32_t *input, uint32_t inputWidth, uint32_t inputHeight, const int32_t *filter, uint32_t filterSize, int32_t *output);
+    void convolution(const int32_t *input, uint32_t inputWidth, uint32_t inputHeight, const int32_t *filter, uint32_t filterSize, int32_t *output);
 
     void convertToGray(uchar3 *input, uint32_t width, uint32_t height, int32_t *output);
 
@@ -13,11 +13,11 @@ namespace SequentialFunction {
 
     void findSeamCurve(int32_t *input, uint32_t inputWidth, uint32_t inputHeight, uint32_t *output);
 
-    int findMinIndex(int32_t *arr, uint32_t size);
+    int findMinIndex(const int32_t *arr, uint32_t size);
 
-    void copyARow(int32_t *input, uint32_t width, int32_t rowIdx, int32_t *output);
+    void copyARow(const int32_t *input, uint32_t width, uint32_t rowIdx, int32_t *output);
 
-    void copyARowAndRemove(uchar3 *input, uint32_t width, int32_t rowIdx, int32_t removedIdx, uchar3 *output);
+    void copyARowAndRemove(uchar3 *input, uint32_t width, uint32_t rowIdx, int32_t removedIdx, uchar3 *output);
 
     void reduce(uchar3 *input, uint32_t width, uint32_t height, uint32_t *path, uchar3 *output);
 }

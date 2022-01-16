@@ -1,5 +1,4 @@
 #include "sequential_solution.cuh"
-#include "utils.cuh"
 #include "timer.cuh"
 #include <string>
 
@@ -7,8 +6,10 @@ using namespace std;
 
 namespace SequentialFunction {
     // Convolution func
-    void convolution(int32_t *input, uint32_t inputWidth, uint32_t inputHeight, const int32_t *filter, uint32_t filterSize, int32_t *output) {
-        int index, k_index, k_x, k_y;
+    void
+    convolution(const int32_t *input, uint32_t inputWidth, uint32_t inputHeight, const int32_t *filter, uint32_t filterSize,
+                int32_t *output) {
+        uint32_t index, k_index, k_x, k_y;
         int32_t sum;
 
         //For each pixel in image
@@ -22,7 +23,8 @@ namespace SequentialFunction {
                         k_x = min(max(x + i, 0), int32_t(inputHeight) - 1);
                         k_y = min(max(y + j, 0), int32_t(inputWidth) - 1);
                         k_index = k_x * inputWidth + k_y;
-                        sum += input[k_index] * filter[(i + int(filterSize / 2)) * int(filterSize) + j + int(filterSize / 2)];
+                        sum += input[k_index] *
+                               filter[(i + int(filterSize / 2)) * int(filterSize) + j + int(filterSize / 2)];
                     }
                 }
                 output[index] = sum;
@@ -39,7 +41,7 @@ namespace SequentialFunction {
 
     // Create energy arr from X and Y
     void addAbs(int32_t *input_1, int32_t *input_2, uint32_t inputWidth, uint32_t inputHeight, int32_t *output) {
-        int index;
+        u_int32_t index;
         int32_t value;
         for (int x = 0; x < inputHeight; x++) {
             for (int y = 0; y < inputWidth; y++) {
@@ -99,7 +101,7 @@ namespace SequentialFunction {
     }
 
     // Util funcs--------------------
-    int findMinIndex(int32_t *arr, uint32_t size) {
+    int findMinIndex(const int32_t *arr, uint32_t size) {
         int min_idx = 0;
         for (int i = 1; i < size; i++) {
             if (arr[min_idx] > arr[i])
@@ -108,8 +110,8 @@ namespace SequentialFunction {
         return min_idx;
     }
 
-    void copyARow(int32_t *input, uint32_t width, int32_t rowIdx, int32_t *output) {
-        int output_idx = rowIdx * width, input_idx;
+    void copyARow(const int32_t *input, uint32_t width, uint32_t rowIdx, int32_t *output) {
+        uint32_t output_idx = rowIdx * width, input_idx;
 
         for (int i = 0; i < width; i++) {
             input_idx = rowIdx * width + i;
@@ -118,8 +120,8 @@ namespace SequentialFunction {
         }
     }
 
-    void copyARowAndRemove(uchar3 *input, uint32_t width, int32_t rowIdx, int32_t removedIdx, uchar3 *output) {
-        int output_idx = rowIdx * (width - 1), input_idx;
+    void copyARowAndRemove(uchar3 *input, uint32_t width, uint32_t rowIdx, int32_t removedIdx, uchar3 *output) {
+        uint32_t output_idx = rowIdx * (width - 1), input_idx;
         for (int i = 0; i < width; i++) {
             if (i == removedIdx) continue;
             input_idx = rowIdx * width + i;
@@ -133,11 +135,9 @@ const int SequentialSolution::SOBEL_X[9] = {1, 0, -1, 2, 0, -2, 1, 0, -1};
 const int SequentialSolution::SOBEL_Y[9] = {1, 2, 1, 0, 0, 0, -1, -2, -1};
 
 PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **argv) {
-    if (argc < 1) {
-        printf("The number of arguments is invalid\n");
-        return PnmImage(inputImage.getWidth(), inputImage.getHeight());
-    }
-    int nDeletingSeams = stoi(argv[0], nullptr);
+    int nDeletingSeams = 1;
+    if (argc > 0)
+        nDeletingSeams = int(strtol(argv[0], nullptr, 10));
 
     printf("Running Baseline Sequential Solution\n");
 
@@ -168,14 +168,15 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
     return outputImage;
 }
 
-IntImage SequentialSolution::convertToGrayScale(const PnmImage &inputImage){
+IntImage SequentialSolution::convertToGrayScale(const PnmImage &inputImage) {
     IntImage outputImage = IntImage(inputImage.getWidth(), inputImage.getHeight());
-    SequentialFunction::convertToGray(inputImage.getPixels(), inputImage.getWidth(), inputImage.getHeight(), outputImage.getPixels());
+    SequentialFunction::convertToGray(inputImage.getPixels(), inputImage.getWidth(), inputImage.getHeight(),
+                                      outputImage.getPixels());
 
     return outputImage;
 }
 
-IntImage SequentialSolution::calculateEnergyMap(const IntImage &inputImage){
+IntImage SequentialSolution::calculateEnergyMap(const IntImage &inputImage) {
     uint32_t width = inputImage.getWidth(), height = inputImage.getHeight();
 
     IntImage gradX = IntImage(inputImage.getWidth(), inputImage.getHeight());
@@ -191,23 +192,25 @@ IntImage SequentialSolution::calculateEnergyMap(const IntImage &inputImage){
     return grad;
 }
 
-IntImage SequentialSolution::calculateSeamMap(const IntImage &inputImage){
+IntImage SequentialSolution::calculateSeamMap(const IntImage &inputImage) {
     IntImage map = IntImage(inputImage.getWidth(), inputImage.getHeight());
-    SequentialFunction::createCumulativeEnergyMap(inputImage.getPixels(), inputImage.getWidth(), inputImage.getHeight(), map.getPixels());
+    SequentialFunction::createCumulativeEnergyMap(inputImage.getPixels(), inputImage.getWidth(), inputImage.getHeight(),
+                                                  map.getPixels());
 
     return map;
-};
+}
 
-void SequentialSolution::extractSeam(const IntImage &energyMap, uint32_t *seam){
+void SequentialSolution::extractSeam(const IntImage &energyMap, uint32_t *seam) {
     SequentialFunction::findSeamCurve(energyMap.getPixels(), energyMap.getWidth(), energyMap.getHeight(), seam);
-};
+}
 
-PnmImage SequentialSolution::deleteSeam(const PnmImage &inputImage, uint32_t *seam){
+PnmImage SequentialSolution::deleteSeam(const PnmImage &inputImage, uint32_t *seam) {
     PnmImage outputImage = PnmImage(inputImage.getWidth() - 1, inputImage.getHeight());
 
-    SequentialFunction::reduce(inputImage.getPixels(), inputImage.getWidth(), inputImage.getHeight(), seam, outputImage.getPixels());
+    SequentialFunction::reduce(inputImage.getPixels(), inputImage.getWidth(), inputImage.getHeight(), seam,
+                               outputImage.getPixels());
     return outputImage;
-};
+}
 
 //uchar3* SequentialSolution::scan(uchar3 *input, int width, int height, int counter) {
 //    int output_width = width - 1;
