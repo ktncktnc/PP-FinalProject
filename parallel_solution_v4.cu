@@ -25,6 +25,7 @@ namespace KernelFunction {
             if (newBlockIdx >= numBlocksPerRow) {
                 while (!isBlockFinished[newBlockIdx - numBlocksPerRow]);
             }
+            __threadfence();
         }
         __syncthreads();
 
@@ -45,6 +46,7 @@ namespace KernelFunction {
                 if (newBlockIdx % numBlocksPerRow != numBlocksPerRow - 1) {
                     while (!isBlockFinished[newBlockIdx - numBlocksPerRow + 1]);
                 }
+                __threadfence();
             }
             if (c < inputWidth) {
                 minVal = input[convertIndex(currentRow - 1, c, inputWidth)];
@@ -61,6 +63,7 @@ namespace KernelFunction {
         __syncthreads();
 
         // 4. Mark Threads as Done
+        __threadfence();
         if (threadIdx.x == 0) {
             isBlockFinished[newBlockIdx] = true;
         }
