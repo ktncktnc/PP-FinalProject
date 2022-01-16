@@ -7,53 +7,57 @@
 #include "parallel_solution_v3.cuh"
 #include "parallel_solution_v4.cuh"
 
-bool extractFilesArgument(int argc, char **argv, char *&inputFileName) {
-    if (argc < 2) {
+bool extractFilesArgument(int argc, char **argv, char *&inputFileName, char *&outputFileName, int &solutionID) {
+    if (argc < 4) {
         printf("The number of arguments is invalid\n");
         return false;
     }
     inputFileName = argv[1];
+    outputFileName = argv[2];
+    solutionID = int(strtol(argv[3], nullptr, 10));
     return true;
 }
 
+const int N_PARALLEL_SOLUTIONS = 4;
+BaseSolution *parallelSolutions[N_PARALLEL_SOLUTIONS];
+
 int main(int argc, char **argv) {
-    char *inputFilename;
+    char *inputFilename, *outputFilename;
+    int solutionID;
     PnmImage inputImage = PnmImage();
 
     printDeviceInfo();
 
-    if (!extractFilesArgument(argc, argv, inputFilename))
+    if (!extractFilesArgument(argc, argv, inputFilename, outputFilename, solutionID))
         return EXIT_FAILURE;
+
+    if (solutionID < 1 || solutionID > N_PARALLEL_SOLUTIONS) {
+        printf("The solution ID is invalid\n");
+        return EXIT_FAILURE;
+    }
+
     inputImage.read(inputFilename);
 
     BaseSolution *sequentialSolution = new SequentialSolution();
-    BaseSolution *parallelSolution = new ParallelSolutionBaseline();
-    BaseSolution *parallelSolutionV2 = new ParallelSolutionV2();
-    BaseSolution *parallelSolutionV3 = new ParallelSolutionV3();
-    BaseSolution *parallelSolutionV4 = new ParallelSolutionV4();
+    parallelSolutions[0] = new ParallelSolutionBaseline();
+    parallelSolutions[1] = new ParallelSolutionV2();
+    parallelSolutions[2] = new ParallelSolutionV3();
+    parallelSolutions[3] = new ParallelSolutionV4();
 
-    PnmImage outputImageSequential = sequentialSolution->run(inputImage, argc - 2, argv + 2);
-    PnmImage outputImageParallel = parallelSolution->run(inputImage, argc - 2, argv + 2);
-    PnmImage outputImageParallelV2 = parallelSolutionV2->run(inputImage, argc - 2, argv + 2);
-    PnmImage outputImageParallelV3 = parallelSolutionV3->run(inputImage, argc - 2, argv + 2);
-    PnmImage outputImageParallelV4 = parallelSolutionV4->run(inputImage, argc - 2, argv + 2);
+    PnmImage outputImageSequential = sequentialSolution->run(inputImage, argc - 4, argv + 4);
+    PnmImage outputImageParallel = parallelSolutions[solutionID - 1]->run(inputImage, argc - 4, argv + 4);
 
-    outputImageSequential.write("output_sequential.pnm");
-    outputImageParallel.write("output_parallel.pnm");
-    outputImageParallelV2.write("output_parallelV2.pnm");
-    outputImageParallelV3.write("output_parallelV3.pnm");
-    outputImageParallelV4.write("output_parallelV4.pnm");
+
+    outputImageSequential.write("sequential_solution.pnm");
+    outputImageParallel.write(outputFilename);
 
     outputImageSequential.compare(outputImageParallel);
-    outputImageSequential.compare(outputImageParallelV2);
-    outputImageSequential.compare(outputImageParallelV3);
-    outputImageSequential.compare(outputImageParallelV4);
 
     free(sequentialSolution);
-    free(parallelSolution);
-    free(parallelSolutionV2);
-    free(parallelSolutionV3);
-    free(parallelSolutionV4);
+    free(parallelSolutions[0]);
+    free(parallelSolutions[1]);
+    free(parallelSolutions[2]);
+    free(parallelSolutions[3]);
 
     return 0;
 }
