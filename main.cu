@@ -16,16 +16,16 @@ void printUserGuide(int list){
     if (list == 0)
         printf("Seam Carving Program Guide: FinalProject <input image path> <output image path> <solutionID>\n");
     else{
-        printf("Solution ID: number from 0 to 8\n"
-               "0: all\n"
-               "1: baseline solution\n"
-               "2: solution 1\n"
-               "3: solution 2\n"
-               "4: solution 3\n"
-               "5: solution 2 and 3\n"
-               "6: solution 2 and 4\n"
-               "7: solution 3 and 4\n"
-               "8: solution 2, 3 and 4\n");
+        printf("Solution ID: \tnumber from 0 to 8\n"
+               "\t\t0: all\n"
+               "\t\t1: baseline solution\n"
+               "\t\t2: solution 1\n"
+               "\t\t3: solution 2\n"
+               "\t\t4: solution 3\n"
+               "\t\t5: solution 2 and 3\n"
+               "\t\t6: solution 2 and 4\n"
+               "\t\t7: solution 3 and 4\n"
+               "\t\t8: solution 2, 3 and 4\n");
     }
 }
 
