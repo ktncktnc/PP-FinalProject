@@ -186,7 +186,7 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
 
     timer.Stop();
     printf("Time: %.3f ms\n", timer.Elapsed());
-    printf("Step time: 1/%.3f ms 2/%.3f ms 3/%.3f ms 4/%.3f ms", cal_energy_time, cal_seam_time, extract_seam_time, delete_seam_time);
+    printf("Step time: %.3f ms \t %.3f ms \t %.3f ms \t %.3f ms\n", cal_energy_time, cal_seam_time, extract_seam_time, delete_seam_time);
     printf("-------------------------------\n");
 
     return outputImage;
