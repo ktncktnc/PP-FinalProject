@@ -110,6 +110,13 @@ PnmImage ParallelSolutionBaseline::run(const PnmImage &inputImage, int argc, cha
     // Start Timer
     printf("Running Baseline Parallel Solution with blockSize=(%d;%d).\n", blockSize.x, blockSize.y);
     GpuTimer timer;
+    GpuTimer stepTimer;
+
+    float cal_energy_time = 0;
+    float cal_seam_time = 0;
+    float extract_seam_time = 0;
+    float delete_seam_time = 0;
+
     timer.Start();
 
     // Create Host Variable
@@ -144,19 +151,36 @@ PnmImage ParallelSolutionBaseline::run(const PnmImage &inputImage, int argc, cha
     // Run Kernel functions
     convertToGrayScale(d_inputImage, inputImage.getWidth(), inputImage.getHeight(), blockSize, d_grayImage);
     for (int i = 0; i < nDeletingSeams; ++i) {
+
         // 1. Calculate the Energy Map
+        stepTimer.Start();
         calculateEnergyMap(d_grayImage, inputImage.getWidth() - i, inputImage.getHeight(), d_filterX, d_filterY,
                            FILTER_SIZE, blockSize, d_energyMap);
+        stepTimer.Stop();
+        cal_energy_time += stepTimer.Elapsed();
+
         // 2. Dynamic Programming
+        stepTimer.Start();
         calculateSeamMap(d_energyMap, inputImage.getWidth() - i, inputImage.getHeight(), blockSize.x * blockSize.y);
+        stepTimer.Stop();
+        cal_seam_time += stepTimer.Elapsed();
+
         // 3. Extract the seam
+        stepTimer.Start();
         CHECK(cudaMemcpy(energyMap, d_energyMap,
                          (inputImage.getWidth() - i) * inputImage.getHeight() * sizeof(int32_t),
                          cudaMemcpyDeviceToHost));
         extractSeam(energyMap, inputImage.getWidth() - i, inputImage.getHeight(), seam);
+        stepTimer.Stop();
+        extract_seam_time += stepTimer.Elapsed();
+
         // 4. Delete the seam
+        stepTimer.Start();
         deleteSeam(d_grayImage, inputImage.getWidth() - i, inputImage.getHeight(), seam, blockSize, d_grayImageTemp);
         deleteSeam(d_inputImage, inputImage.getWidth() - i, inputImage.getHeight(), seam, blockSize, d_inputImageTemp);
+        stepTimer.Stop();
+        delete_seam_time += stepTimer.Elapsed();
+
         swap(d_grayImage, d_grayImageTemp);
         swap(d_inputImage, d_inputImageTemp);
     }
@@ -181,6 +205,7 @@ PnmImage ParallelSolutionBaseline::run(const PnmImage &inputImage, int argc, cha
     // Stop Timer
     timer.Stop();
     printf("Time: %.3f ms\n", timer.Elapsed());
+    printf("Step time: 1/%.3f ms 2/%.3f ms 3/%.3f ms 4/%.3f ms", cal_energy_time, cal_seam_time, extract_seam_time, delete_seam_time);
     printf("-------------------------------\n");
 
     // Return

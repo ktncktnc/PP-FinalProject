@@ -142,6 +142,13 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
     printf("Running Baseline Sequential Solution\n");
 
     GpuTimer timer;
+    GpuTimer stepTimer;
+
+    float cal_energy_time = 0;
+    float cal_seam_time = 0;
+    float extract_seam_time = 0;
+    float delete_seam_time = 0;
+
     timer.Start();
 
     PnmImage outputImage = inputImage;
@@ -150,19 +157,36 @@ PnmImage SequentialSolution::run(const PnmImage &inputImage, int argc, char **ar
         // 1. Convert to GrayScale
         IntImage grayImage = convertToGrayScale(outputImage);
         // 2. Calculate the Energy Map
+        stepTimer.Start();
         IntImage energyMap = calculateEnergyMap(grayImage);
+        stepTimer.Stop();
+        cal_energy_time += stepTimer.Elapsed();
+
         // 3. Dynamic Programming
+        stepTimer.Start();
         IntImage seamMap = calculateSeamMap(energyMap);
+        stepTimer.Stop();
+        cal_seam_time += stepTimer.Elapsed();
+
         // 4. Extract the seam
+        stepTimer.Start();
         auto *seam = (uint32_t *) malloc(energyMap.getHeight() * sizeof(uint32_t));
         extractSeam(seamMap, seam);
+        stepTimer.Stop();
+        extract_seam_time += stepTimer.Elapsed();
+
         // 5. Delete the seam
+        stepTimer.Start();
         outputImage = deleteSeam(outputImage, seam);
+        stepTimer.Stop();
+        delete_seam_time += stepTimer.Elapsed();
+
         free(seam);
     }
 
     timer.Stop();
     printf("Time: %.3f ms\n", timer.Elapsed());
+    printf("Step time: 1/%.3f ms 2/%.3f ms 3/%.3f ms 4/%.3f ms", cal_energy_time, cal_seam_time, extract_seam_time, delete_seam_time);
     printf("-------------------------------\n");
 
     return outputImage;
