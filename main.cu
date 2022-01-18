@@ -82,15 +82,20 @@ int main(int argc, char **argv) {
             outputImages.push_back(parallelSolution->run(inputImage, argc - 4, argv + 4));
         for (auto &outputImage: outputImages)
             outputImageSequential.compare(outputImage);
+
+        outputImages[0].write(outputFilename);
+
+
     } else {
         printf("Running one solution...\n");
         PnmImage outputParallel = parallelSolutions[solutionID - 1]->run(inputImage, argc - 4, argv + 4);
         outputImageSequential.compare(outputParallel);
         printf(R"(Outputs are written to "sequential_solution.pnm" (Sequential Output) and "%s" (Parallel Output).)",
                outputFilename);
-        outputImageSequential.write("sequential_solution.pnm");
         outputParallel.write(outputFilename);
     }
+    outputImageSequential.write("sequential_solution.pnm");
+
 
     free(sequentialSolution);
     for (auto &parallelSolution: parallelSolutions)
