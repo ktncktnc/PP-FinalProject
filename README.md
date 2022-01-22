@@ -10,7 +10,7 @@
 !cmake ..
 !make
 ```
-**Note**: Nếu GPU là K80 (có compute capability là 3.7) thì cần phải uncomment dòng cuối trong file CMakeLis>
+**Note**: Nếu GPU là K80 (có compute capability là 3.7) thì cần phải uncomment dòng cuối trong file CMakeLists.txt để biên dịch ra đúng.
 
 ## Cách thực thi chương trình:
 `./FinalProject <input path> <output path> <solutionID> <n seam> (<blockSize.x> <blockSize.y>)`
